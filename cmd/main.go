@@ -2,8 +2,10 @@ package main
 
 import (
 	"courseworker/config"
+	"courseworker/internal/handler"
 	"log"
 
+	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 )
@@ -20,4 +22,10 @@ func main() {
 		panic(err)
 	}
 	defer db.Close()
+
+	r := gin.Default()
+
+	handler.StartEngine(r, db)
+
+	r.Run(":8000")
 }
