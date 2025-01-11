@@ -14,6 +14,17 @@ type UserResponse struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
+func ToUserResponse(u *sqlc.User) *UserResponse {
+	return &UserResponse{
+		ID:         u.ID,
+		Name:       u.Name,
+		Email:      u.Email,
+		ProfileImg: u.ProfileImg.String,
+		CreatedAt:  u.CreatedAt.Time,
+		UpdatedAt:  u.UpdatedAt.Time,
+	}
+}
+
 func ToUserResponses(users *[]sqlc.GetAllUsersRow) []UserResponse {
 	var responses []UserResponse
 	for _, u := range *users {

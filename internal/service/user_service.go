@@ -8,6 +8,7 @@ import (
 
 type UserService interface {
 	GetUsers() ([]dto.UserResponse, error)
+	GetUserByID(userID string) (*dto.UserResponse, error)
 }
 
 type userService struct {
@@ -25,4 +26,13 @@ func (s *userService) GetUsers() ([]dto.UserResponse, error) {
 		return nil, _error.E(op, _error.Title("Failed to get users"), err)
 	}
 	return dto.ToUserResponses(&users), nil
+}
+
+func (s *userService) GetUserByID(userID string) (*dto.UserResponse, error) {
+	const op _error.Op = "serv/GetUserByID"
+	user, err := s.repo.GetUserByID(userID)
+	if err != nil {
+		return nil, _error.E(op, _error.Title("Failed to get user"), err)
+	}
+	return dto.ToUserResponse(user), nil
 }

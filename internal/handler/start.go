@@ -11,6 +11,7 @@ import (
 
 func route(r *gin.Engine, uh *UserHandler) {
 	r.GET("/users", uh.GetUsers)
+	r.GET("/users/:userId", uh.GetUserByID)
 }
 
 func InitHandler(db *sql.DB) *UserHandler {
