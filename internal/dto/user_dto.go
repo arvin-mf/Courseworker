@@ -3,6 +3,8 @@ package dto
 import (
 	"courseworker/internal/db/sqlc"
 	"time"
+
+	"github.com/golang-jwt/jwt/v4"
 )
 
 type UserResponse struct {
@@ -39,4 +41,20 @@ func ToUserResponses(users *[]sqlc.GetAllUsersRow) []UserResponse {
 		responses = append(responses, response)
 	}
 	return responses
+}
+
+type UserClaims struct {
+	ID          string `json:"id" binding:"required"`
+	ExpDuration int64  `json:"exp_duration"`
+	jwt.RegisteredClaims
+}
+
+func NewUserClaims(ID string, exp time.Duration) UserClaims {
+	return UserClaims{
+		ID:          ID,
+		ExpDuration: int64(exp.Seconds()),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(exp)),
+		},
+	}
 }
