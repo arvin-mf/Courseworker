@@ -88,6 +88,7 @@ func (s *userService) CreateUser(arg sqlc.CreateUserParams) (*dto.ResponseID, er
 		Email:    arg.Email,
 		Password: arg.Password,
 	}
+
 	_, err := s.repo.CreateUser(input)
 	if err != nil {
 		return nil, _error.E(op, _error.Title("Failed to create user"), err)

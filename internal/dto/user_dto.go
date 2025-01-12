@@ -87,6 +87,7 @@ type RegistrationClaims struct {
 
 func NewRegistrationClaims(name, email, pass string, exp time.Duration) RegistrationClaims {
 	return RegistrationClaims{
+		Name:     name,
 		Email:    email,
 		HashedPw: pass,
 		RegisteredClaims: jwt.RegisteredClaims{

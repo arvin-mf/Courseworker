@@ -16,6 +16,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
@@ -141,6 +142,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 			_error.Forbidden,
 			_error.Title("Failed to register user"),
 			_error.Detail("email has been used"),
+			err,
 		))
 		return
 	}
@@ -151,6 +153,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 			_error.InvalidRequest,
 			_error.Title("Failed to register user"),
 			_error.Detail("password confirmation does not match"),
+			err,
 		))
 		return
 	}
@@ -172,4 +175,36 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusOK, "Confirmation email sent", resp)
+}
+
+func (h *UserHandler) CreateConfirmedUser(c *gin.Context) {
+	tokenTemp := c.Query("token")
+	claims := &dto.RegistrationClaims{}
+	token, err := jwt.ParseWithClaims(tokenTemp, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("JWT_SECRET_KEY")), nil
+	})
+
+	if err != nil || !token.Valid {
+		response.HttpError(c, _error.E(
+			_error.Op("hand/CreateConfirmedUser"),
+			_error.InvalidRequest,
+			_error.Title("Failed to create user"),
+			_error.Detail("invalid token"),
+			err,
+		))
+		return
+	}
+
+	input := sqlc.CreateUserParams{
+		Name:     claims.Name,
+		Email:    claims.Email,
+		Password: claims.HashedPw,
+	}
+
+	resp, err := h.serv.CreateUser(input)
+	if err != nil {
+		response.HttpError(c, err)
+		return
+	}
+	response.Success(c, http.StatusCreated, "User created successfully", resp)
 }
