@@ -3,11 +3,15 @@ package response
 import (
 	"courseworker/internal/dto"
 	_error "courseworker/pkg/error"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"reflect"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -123,4 +127,134 @@ func HttpError(c *gin.Context, err error) {
 			RequestID: requestID,
 		},
 	})
+}
+
+func getJSONFieldName(structType reflect.Type, fieldName string) string {
+	if structType.Kind() == reflect.Ptr {
+		structType = structType.Elem()
+	}
+	if structType.Kind() != reflect.Struct {
+		return fieldName
+	}
+
+	for i := 0; i < structType.NumField(); i++ {
+		field := structType.Field(i)
+		if field.Name == fieldName {
+			jsonTag := field.Tag.Get("json")
+			if jsonTag == "" || jsonTag == "-" {
+				return fieldName
+			}
+			if commaIdx := stringIndex(jsonTag, ','); commaIdx != -1 {
+				return jsonTag[:commaIdx]
+			}
+			return jsonTag
+		}
+	}
+	return fieldName
+}
+
+func stringIndex(s string, sep rune) int {
+	for i, c := range s {
+		if c == sep {
+			return i
+		}
+	}
+	return -1
+}
+
+func HttpBindingError(c *gin.Context, err error, reqStruct interface{}) {
+	requestID := uuid.New().String()
+	var logError LogError
+	logError.Method = c.Request.Method
+	logError.Path = c.Request.URL.Path
+	logError.RequestID = requestID
+
+	if syntaxErr, ok := err.(*json.SyntaxError); ok {
+		logError.Status = http.StatusBadRequest
+		logError.Kind = _error.InvalidRequest.String()
+		logError.Error = syntaxErr.Error()
+		slog.With("data", logError).Error("Invalid request")
+
+		c.JSON(http.StatusBadRequest, &ResponseError{
+			Status:  false,
+			Message: "Invalid request",
+			Error: &ServiceError{
+				RequestID: requestID,
+				Kind:      _error.InvalidRequest.String(),
+				Detail:    "the request payload contains invalid JSON format - please correct it",
+			},
+		})
+		return
+	} else if unmarshalTypeErr, ok := err.(*json.UnmarshalTypeError); ok {
+		params := []_error.ProblemParameter{
+			{
+				Name:   getJSONFieldName(reflect.TypeOf(reqStruct), unmarshalTypeErr.Field),
+				Reason: fmt.Sprintf("expected type '%s' but got '%s'", unmarshalTypeErr.Type, unmarshalTypeErr.Value),
+			},
+		}
+		logError.Status = http.StatusBadRequest
+		logError.Kind = _error.InvalidRequest.String()
+		logError.Error = unmarshalTypeErr.Error()
+		logError.Params = params
+		slog.With("data", logError).Error("Invalid request")
+		c.JSON(http.StatusBadRequest, &ResponseError{
+			Status:  false,
+			Message: "Invalid request",
+			Error: &ServiceError{
+				RequestID: requestID,
+				Kind:      _error.InvalidRequest.String(),
+				Detail:    "the request payload contains type mismatch",
+				Param:     params,
+			},
+		})
+		return
+	} else if validationErrs, ok := err.(validator.ValidationErrors); ok {
+		var params []_error.ProblemParameter
+		for _, fieldErr := range validationErrs {
+			params = append(params, _error.ProblemParameter{
+				Name:   getJSONFieldName(reflect.TypeOf(reqStruct), fieldErr.Field()),
+				Reason: validationReasonMessage(fieldErr),
+			})
+		}
+		logError.Status = http.StatusUnprocessableEntity
+		logError.Kind = _error.Validation.String()
+		logError.Error = validationErrs.Error()
+		logError.Params = params
+		slog.With("data", logError).Error("Invalid request")
+		c.JSON(http.StatusUnprocessableEntity, &ResponseError{
+			Status:  false,
+			Message: "Invalid request",
+			Error: &ServiceError{
+				RequestID: requestID,
+				Kind:      _error.Validation.String(),
+				Detail:    "The request body contains failed field validation",
+				Param:     params,
+			},
+		})
+		return
+	}
+	logError.Status = http.StatusUnprocessableEntity
+	logError.Kind = _error.InvalidRequest.String()
+	logError.Error = err.Error()
+	slog.With("data", logError).Error("Unexpected error")
+	c.JSON(http.StatusInternalServerError, &ResponseError{
+		Status:  false,
+		Message: "Unexpected error",
+		Error: &ServiceError{
+			RequestID: requestID,
+		},
+	})
+}
+
+func validationReasonMessage(fieldErr validator.FieldError) string {
+	switch fieldErr.Tag() {
+	case "required":
+		return "this field is required"
+	case "email":
+		return "must be a valid email format"
+	case "url":
+		return "must be a valid URL format"
+	default:
+		return fmt.Sprintf("failed validation for tag '%s'", fieldErr.Tag())
+	}
 }

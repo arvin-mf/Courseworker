@@ -11,7 +11,7 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-func GenerateToken(payload sqlc.User, org_id string) (string, error) {
+func GenerateToken(payload sqlc.User) (string, error) {
 	expStr := os.Getenv("JWT_EXP")
 	var exp time.Duration
 	exp, err := time.ParseDuration(expStr)
@@ -24,6 +24,26 @@ func GenerateToken(payload sqlc.User, org_id string) (string, error) {
 		return "", err
 	}
 	return tokenJwt, nil
+}
+
+func GenerateConfirmationToken(payload sqlc.CreateUserParams) (string, error) {
+	expStr := os.Getenv("JWT_EXP")
+	var exp time.Duration
+	exp, err := time.ParseDuration(expStr)
+	if expStr == "" || err != nil {
+		exp = time.Hour * 3
+	}
+	tokenTemp := jwt.NewWithClaims(jwt.SigningMethodHS256, dto.NewRegistrationClaims(
+		payload.Name,
+		payload.Email,
+		payload.Password,
+		exp,
+	))
+	token, err := tokenTemp.SignedString([]byte(os.Getenv("JWT_SECRET_KEY")))
+	if err != nil {
+		return "", err
+	}
+	return token, nil
 }
 
 func DecodeToken(signedToken string) (*dto.UserClaims, error) {

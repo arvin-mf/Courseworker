@@ -58,3 +58,39 @@ func NewUserClaims(ID string, exp time.Duration) UserClaims {
 		},
 	}
 }
+
+type AuthenticatedUser struct {
+	ID            string `json:"localId"`
+	Email         string `json:"email"`
+	EmailVerified bool   `json:"emailVerified"`
+	Name          string `json:"name"`
+	Photo         string `json:"photoUrl"`
+}
+
+type RegisterUserReq struct {
+	Name            string `json:"name"`
+	Email           string `json:"email" binding:"required"`
+	Password        string `json:"password" binding:"required"`
+	ConfirmPassword string `json:"confirm_password" binding:"required"`
+}
+
+type RegisterUserResp struct {
+	Email string `json:"email"`
+}
+
+type RegistrationClaims struct {
+	Name     string `json:"name" binding:"required"`
+	Email    string `json:"email" binding:"required"`
+	HashedPw string `json:"hashed_pw" binding:"required"`
+	jwt.RegisteredClaims
+}
+
+func NewRegistrationClaims(name, email, pass string, exp time.Duration) RegistrationClaims {
+	return RegistrationClaims{
+		Email:    email,
+		HashedPw: pass,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(exp)),
+		},
+	}
+}
