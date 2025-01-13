@@ -8,6 +8,15 @@ import (
 	"database/sql"
 )
 
+type Course struct {
+	ID        int64
+	Name      string
+	Subname   sql.NullString
+	UserID    string
+	CreatedAt sql.NullTime
+	UpdatedAt sql.NullTime
+}
+
 type User struct {
 	ID         string
 	Name       string
