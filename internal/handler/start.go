@@ -15,8 +15,9 @@ func route(r *gin.Engine, uh *UserHandler, ch *CourseHandler) {
 	r.GET("/users/:userId", uh.GetUserByID)
 	r.GET("/auth/google/login-w-google", uh.LoginWithGoogle)
 	r.GET("/auth/google/callback", uh.GetGoogleDetails)
-	r.POST("/users", uh.RegisterUser)
+	r.POST("/register", uh.RegisterUser)
 	r.GET("/account-confirm", uh.CreateConfirmedUser)
+	r.POST("/login", uh.LoginUser)
 
 	r.GET("/courses", middleware.ValidateToken(), ch.GetCourses)
 	r.GET("/courses/:courseId", middleware.ValidateToken(), ch.GetCourseByID)

@@ -95,3 +95,18 @@ func NewRegistrationClaims(name, email, pass string, exp time.Duration) Registra
 		},
 	}
 }
+
+type CreateUserParams struct {
+	Name     string
+	Email    string
+	HashedPw string
+}
+
+type LoginUserReq struct {
+	Email    string `json:"email" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+type LoginUserResp struct {
+	Token string `json:"token"`
+}

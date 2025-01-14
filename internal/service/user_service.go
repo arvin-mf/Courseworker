@@ -22,9 +22,10 @@ type UserService interface {
 	GetUserByID(userID string) (*dto.UserResponse, error)
 	EmailExists(email string) (bool, error)
 	GenerateToken(email string) (string, error)
-	CreateUser(arg sqlc.CreateUserParams) (*dto.ResponseID, error)
+	CreateUser(arg dto.CreateUserParams) (*dto.ResponseID, error)
 	HashPassword(pw string) (string, error)
 	SendConfirmationEmail(arg sqlc.CreateUserParams) (*dto.RegisterUserResp, error)
+	LoginUser(arg dto.LoginUserReq) (*dto.LoginUserResp, error)
 }
 
 type userService struct {
@@ -79,14 +80,14 @@ func (s *userService) GenerateToken(email string) (string, error) {
 	return token, nil
 }
 
-func (s *userService) CreateUser(arg sqlc.CreateUserParams) (*dto.ResponseID, error) {
+func (s *userService) CreateUser(arg dto.CreateUserParams) (*dto.ResponseID, error) {
 	const op _error.Op = "serv/CreateUser"
 
 	input := sqlc.CreateUserParams{
 		ID:       uuid.New().String(),
 		Name:     arg.Name,
 		Email:    arg.Email,
-		Password: arg.Password,
+		Password: arg.HashedPw,
 	}
 
 	_, err := s.repo.CreateUser(input)
@@ -148,4 +149,23 @@ func (s *userService) SendConfirmationEmail(arg sqlc.CreateUserParams) (*dto.Reg
 	return &dto.RegisterUserResp{
 		Email: arg.Email,
 	}, nil
+}
+
+func (s *userService) LoginUser(arg dto.LoginUserReq) (*dto.LoginUserResp, error) {
+	const op _error.Op = "serv/GetUserByEmail"
+	user, err := s.repo.GetUserByEmail(arg.Email)
+	if err != nil {
+		return nil, _error.E(op, _error.Title("Failed to get user"), err)
+	}
+
+	if err := bcrypt.ValidateHash(arg.Password, user.Password); err != nil {
+		return nil, _error.E(op, _error.Validation, _error.Title("Failed to validate password"), err)
+	}
+
+	token, err := jwt.GenerateToken(*user)
+	if err != nil {
+		return nil, _error.E(op, _error.Internal, _error.Title("Failed to generate token"), err)
+	}
+
+	return &dto.LoginUserResp{Token: token}, nil
 }

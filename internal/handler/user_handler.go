@@ -109,10 +109,10 @@ func (h *UserHandler) GetGoogleDetails(c *gin.Context) {
 		response.HttpError(c, err)
 	}
 	if !isExist {
-		h.serv.CreateUser(sqlc.CreateUserParams{
+		h.serv.CreateUser(dto.CreateUserParams{
 			Name:     container.Name,
 			Email:    container.Email,
-			Password: "",
+			HashedPw: "",
 		})
 	}
 
@@ -195,10 +195,10 @@ func (h *UserHandler) CreateConfirmedUser(c *gin.Context) {
 		return
 	}
 
-	input := sqlc.CreateUserParams{
+	input := dto.CreateUserParams{
 		Name:     claims.Name,
 		Email:    claims.Email,
-		Password: claims.HashedPw,
+		HashedPw: claims.HashedPw,
 	}
 
 	resp, err := h.serv.CreateUser(input)
@@ -207,4 +207,19 @@ func (h *UserHandler) CreateConfirmedUser(c *gin.Context) {
 		return
 	}
 	response.Success(c, http.StatusCreated, "User created successfully", resp)
+}
+
+func (h *UserHandler) LoginUser(c *gin.Context) {
+	var req dto.LoginUserReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.HttpBindingError(c, err, req)
+		return
+	}
+
+	resp, err := h.serv.LoginUser(req)
+	if err != nil {
+		response.HttpError(c, err)
+		return
+	}
+	response.Success(c, http.StatusOK, "Logged in successfully", resp)
 }
