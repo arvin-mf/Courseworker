@@ -21,11 +21,11 @@ type UserService interface {
 	GetUsers() ([]dto.UserResponse, error)
 	GetUserByID(userID string) (*dto.UserResponse, error)
 	EmailExists(email string) (bool, error)
-	GenerateToken(email string) (string, error)
+	GenerateToken(email string) (*dto.TokenResp, error)
 	CreateUser(arg dto.CreateUserParams) (*dto.ResponseID, error)
 	HashPassword(pw string) (string, error)
 	SendConfirmationEmail(arg sqlc.CreateUserParams) (*dto.RegisterUserResp, error)
-	LoginUser(arg dto.LoginUserReq) (*dto.LoginUserResp, error)
+	LoginUser(arg dto.LoginUserReq) (*dto.TokenResp, error)
 }
 
 type userService struct {
@@ -66,18 +66,18 @@ func (s *userService) EmailExists(email string) (bool, error) {
 	return true, nil
 }
 
-func (s *userService) GenerateToken(email string) (string, error) {
+func (s *userService) GenerateToken(email string) (*dto.TokenResp, error) {
 	const op _error.Op = "serv/GenerateToken"
 	user, err := s.repo.GetUserByEmail(email)
 	if err != nil {
-		return "", _error.E(op, _error.Title("Failed to get user"), err)
+		return nil, _error.E(op, _error.Title("Failed to get user"), err)
 	}
 
 	token, err := jwt.GenerateToken(*user)
 	if err != nil {
-		return "", _error.E(op, _error.Internal, _error.Title("Failed to generate token"), err)
+		return nil, _error.E(op, _error.Internal, _error.Title("Failed to generate token"), err)
 	}
-	return token, nil
+	return dto.ToTokenResp(token), nil
 }
 
 func (s *userService) CreateUser(arg dto.CreateUserParams) (*dto.ResponseID, error) {
@@ -151,7 +151,7 @@ func (s *userService) SendConfirmationEmail(arg sqlc.CreateUserParams) (*dto.Reg
 	}, nil
 }
 
-func (s *userService) LoginUser(arg dto.LoginUserReq) (*dto.LoginUserResp, error) {
+func (s *userService) LoginUser(arg dto.LoginUserReq) (*dto.TokenResp, error) {
 	const op _error.Op = "serv/GetUserByEmail"
 	user, err := s.repo.GetUserByEmail(arg.Email)
 	if err != nil {
@@ -167,5 +167,5 @@ func (s *userService) LoginUser(arg dto.LoginUserReq) (*dto.LoginUserResp, error
 		return nil, _error.E(op, _error.Internal, _error.Title("Failed to generate token"), err)
 	}
 
-	return &dto.LoginUserResp{Token: token}, nil
+	return dto.ToTokenResp(token), nil
 }

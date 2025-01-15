@@ -35,7 +35,7 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 		response.HttpError(c, err)
 		return
 	}
-	response.Success(c, http.StatusOK, "Users retrieved successfully", resp)
+	response.Success(c, http.StatusOK, usersFetchSuccess, resp)
 }
 
 func (h *UserHandler) GetUserByID(c *gin.Context) {
@@ -45,7 +45,7 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 		response.HttpError(c, err)
 		return
 	}
-	response.Success(c, http.StatusOK, "User retrieved successfully", resp)
+	response.Success(c, http.StatusOK, userFetchSuccess, resp)
 }
 
 var googleOauthConfig = &oauth2.Config{
@@ -85,13 +85,13 @@ func (h *UserHandler) GetGoogleDetails(c *gin.Context) {
 		return
 	}
 
-	resp, err := http.Get("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + token.AccessToken)
+	rsp, err := http.Get("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + token.AccessToken)
 	if err != nil {
 		response.HttpError(c, err)
 		return
 	}
 
-	content, err := io.ReadAll(resp.Body)
+	content, err := io.ReadAll(rsp.Body)
 	if err != nil {
 		response.HttpError(c, err)
 		return
@@ -116,12 +116,12 @@ func (h *UserHandler) GetGoogleDetails(c *gin.Context) {
 		})
 	}
 
-	data, err := h.serv.GenerateToken(container.Email)
+	resp, err := h.serv.GenerateToken(container.Email)
 	if err != nil {
 		response.HttpError(c, err)
 		return
 	}
-	response.Success(c, 200, "success", gin.H{"token": data})
+	response.Success(c, 200, userLoginSuccess, resp)
 }
 
 func (h *UserHandler) RegisterUser(c *gin.Context) {
@@ -174,7 +174,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, http.StatusOK, "Confirmation email sent", resp)
+	response.Success(c, http.StatusOK, userRegisterSuccess, resp)
 }
 
 func (h *UserHandler) CreateConfirmedUser(c *gin.Context) {
@@ -206,7 +206,7 @@ func (h *UserHandler) CreateConfirmedUser(c *gin.Context) {
 		response.HttpError(c, err)
 		return
 	}
-	response.Success(c, http.StatusCreated, "User created successfully", resp)
+	response.Success(c, http.StatusCreated, userCreateSuccess, resp)
 }
 
 func (h *UserHandler) LoginUser(c *gin.Context) {
@@ -221,5 +221,5 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 		response.HttpError(c, err)
 		return
 	}
-	response.Success(c, http.StatusOK, "Logged in successfully", resp)
+	response.Success(c, http.StatusOK, userLoginSuccess, resp)
 }

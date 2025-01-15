@@ -28,7 +28,7 @@ func (h *CourseHandler) GetCourses(c *gin.Context) {
 		response.HttpError(c, err)
 		return
 	}
-	response.Success(c, http.StatusOK, "Course(s) retrieved successfully", resp)
+	response.Success(c, http.StatusOK, coursesFetchSuccess, resp)
 }
 
 func (h *CourseHandler) GetCourseByID(c *gin.Context) {
@@ -51,7 +51,7 @@ func (h *CourseHandler) GetCourseByID(c *gin.Context) {
 		response.HttpError(c, err)
 		return
 	}
-	response.Success(c, http.StatusOK, "Course retrieved successfully", resp)
+	response.Success(c, http.StatusOK, courseFetchSuccess, resp)
 }
 
 func (h *CourseHandler) CreateCourse(c *gin.Context) {
@@ -69,7 +69,7 @@ func (h *CourseHandler) CreateCourse(c *gin.Context) {
 		response.HttpError(c, err)
 		return
 	}
-	response.Success(c, http.StatusCreated, "Course successfully created", resp)
+	response.Success(c, http.StatusCreated, courseCreateSuccess, resp)
 }
 
 func (h *CourseHandler) UpdateCourse(c *gin.Context) {
@@ -97,7 +97,7 @@ func (h *CourseHandler) UpdateCourse(c *gin.Context) {
 		response.HttpError(c, err)
 		return
 	}
-	response.Success(c, http.StatusOK, "Course successfully updated", resp)
+	response.Success(c, http.StatusOK, courseUpdateSuccess, resp)
 }
 
 func (h *CourseHandler) DeleteCourse(c *gin.Context) {
@@ -118,5 +118,5 @@ func (h *CourseHandler) DeleteCourse(c *gin.Context) {
 		response.HttpError(c, err)
 		return
 	}
-	response.Success(c, http.StatusOK, "Course successfully deleted", nil)
+	response.Success(c, http.StatusOK, courseDeleteSuccess, nil)
 }

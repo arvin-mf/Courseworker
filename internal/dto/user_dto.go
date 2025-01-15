@@ -107,6 +107,12 @@ type LoginUserReq struct {
 	Password string `json:"password" binding:"required"`
 }
 
-type LoginUserResp struct {
+type TokenResp struct {
 	Token string `json:"token"`
+}
+
+func ToTokenResp(t string) *TokenResp {
+	return &TokenResp{
+		Token: t,
+	}
 }
