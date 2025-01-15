@@ -21,6 +21,9 @@ func route(r *gin.Engine, uh *UserHandler, ch *CourseHandler) {
 
 	r.GET("/courses", middleware.ValidateToken(), ch.GetCourses)
 	r.GET("/courses/:courseId", middleware.ValidateToken(), ch.GetCourseByID)
+	r.POST("/courses", middleware.ValidateToken(), ch.CreateCourse)
+	r.PUT("/courses/:courseId", middleware.ValidateToken(), ch.UpdateCourse)
+	r.DELETE("/courses/:courseId", middleware.ValidateToken(), ch.DeleteCourse)
 }
 
 func InitHandler(db *sql.DB) (*UserHandler, *CourseHandler) {

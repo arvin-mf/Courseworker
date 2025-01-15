@@ -40,3 +40,8 @@ func ToCourseResponses(courses *[]sqlc.Course) []CourseResponse {
 	}
 	return responses
 }
+
+type CourseCreateUpdateReq struct {
+	Name    string `json:"name"`
+	Subname string `json:"subname"`
+}

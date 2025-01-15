@@ -6,11 +6,15 @@ import (
 	_error "courseworker/pkg/error"
 	"database/sql"
 	"errors"
+	"fmt"
 )
 
 type CourseRepository interface {
 	GetAllCourses(userID string) ([]sqlc.Course, error)
 	GetCourseByID(ID int64) (*sqlc.Course, error)
+	CreateCourse(param sqlc.CreateCourseParams) (sql.Result, error)
+	UpdateCourse(param sqlc.UpdateCourseParams) (sql.Result, error)
+	DeleteCourse(courseID int64) (sql.Result, error)
 }
 
 type courseRepository struct {
@@ -43,4 +47,41 @@ func (r *courseRepository) GetCourseByID(ID int64) (*sqlc.Course, error) {
 		return nil, _error.E(op, _error.Database, err)
 	}
 	return &result, nil
+}
+
+func (r *courseRepository) CreateCourse(param sqlc.CreateCourseParams) (sql.Result, error) {
+	const op _error.Op = "repo/CreateCourse"
+	result, err := r.db.CreateCourse(context.Background(), param)
+	if err != nil {
+		return nil, _error.E(op, _error.Database, err)
+	}
+	return result, nil
+}
+
+func (r *courseRepository) UpdateCourse(param sqlc.UpdateCourseParams) (sql.Result, error) {
+	const op _error.Op = "repo/UpdateCourse"
+	result, err := r.db.UpdateCourse(context.Background(), param)
+	if err != nil {
+		return nil, _error.E(op, _error.Database, err)
+	}
+	return result, nil
+}
+
+func (r *courseRepository) DeleteCourse(courseID int64) (sql.Result, error) {
+	const op _error.Op = "repo/DeleteCourse"
+	result, err := r.db.DeleteCourse(context.Background(), courseID)
+	if err != nil {
+		return nil, _error.E(op, _error.Database, err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return nil, _error.E(op, _error.Database, err)
+	}
+	if affected == 0 {
+		return nil, _error.E(
+			op, _error.Title("No row affected"),
+			fmt.Sprintf("The requested course with id %d could not be found", courseID),
+		)
+	}
+	return result, nil
 }

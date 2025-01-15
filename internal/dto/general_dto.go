@@ -7,10 +7,10 @@ type Response struct {
 }
 
 type ResponseID struct {
-	ID string `json:"id"`
+	ID any `json:"id"`
 }
 
-func NewResponseID(id string) *ResponseID {
+func NewResponseID(id any) *ResponseID {
 	return &ResponseID{
 		ID: id,
 	}
