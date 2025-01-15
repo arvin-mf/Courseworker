@@ -25,6 +25,9 @@ func (r *courseRepository) GetAllCourses(userID string) ([]sqlc.Course, error) {
 	const op _error.Op = "repo/GetAllCourses"
 	result, err := r.db.GetAllCourses(context.Background(), userID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return []sqlc.Course{}, nil
+		}
 		return nil, _error.E(op, _error.Database, err)
 	}
 	return result, nil

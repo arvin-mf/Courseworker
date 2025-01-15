@@ -26,7 +26,7 @@ func ToCourseResponse(c *sqlc.Course) *CourseResponse {
 }
 
 func ToCourseResponses(courses *[]sqlc.Course) []CourseResponse {
-	var responses []CourseResponse
+	responses := []CourseResponse{}
 	for _, c := range *courses {
 		response := CourseResponse{
 			ID:        c.ID,
