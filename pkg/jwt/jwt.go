@@ -18,8 +18,8 @@ func GenerateToken(payload sqlc.User) (string, error) {
 	if expStr == "" || err != nil {
 		exp = time.Hour * 3
 	}
-	tokenJwtSementara := jwt.NewWithClaims(jwt.SigningMethodHS256, dto.NewUserClaims(payload.ID, exp))
-	tokenJwt, err := tokenJwtSementara.SignedString([]byte(os.Getenv("JWT_SECRET_KEY")))
+	tokenJwtTemp := jwt.NewWithClaims(jwt.SigningMethodHS256, dto.NewUserClaims(payload.ID, exp))
+	tokenJwt, err := tokenJwtTemp.SignedString([]byte(os.Getenv("JWT_SECRET_KEY")))
 	if err != nil {
 		return "", err
 	}
@@ -50,7 +50,7 @@ func DecodeToken(signedToken string) (*dto.UserClaims, error) {
 	dcd, err := jwt.ParseWithClaims(signedToken, &dto.UserClaims{}, func(t *jwt.Token) (interface{}, error) {
 		_, ok := t.Method.(*jwt.SigningMethodHMAC)
 		if !ok {
-			return "", errors.New("wrong signging method")
+			return "", errors.New("wrong signing method")
 		}
 		return []byte(os.Getenv("JWT_SECRET_KEY")), nil
 	})
