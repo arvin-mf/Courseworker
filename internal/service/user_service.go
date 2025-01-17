@@ -94,7 +94,7 @@ func (s *userService) CreateUser(arg dto.CreateUserParams) (*dto.ResponseID, err
 	if err != nil {
 		return nil, _error.E(op, _error.Title("Failed to create user"), err)
 	}
-	return dto.NewResponseID(input.ID), nil
+	return &dto.ResponseID{ID: input.ID}, nil
 }
 
 func (s *userService) HashPassword(pw string) (string, error) {

@@ -78,7 +78,7 @@ func (s *courseService) CreateCourse(c *gin.Context, userID string, arg dto.Cour
 		log.Printf("Redis Set failed: %v", err)
 	}
 
-	return dto.NewResponseID(id), nil
+	return &dto.ResponseID{ID: id}, nil
 }
 
 func (s *courseService) UpdateCourse(userID string, courseID int64, arg dto.CourseCreateUpdateReq) (*dto.ResponseID, error) {
@@ -94,7 +94,7 @@ func (s *courseService) UpdateCourse(userID string, courseID int64, arg dto.Cour
 	if err != nil {
 		return nil, _error.E(op, _error.Title("Failed to update course"), err)
 	}
-	return dto.NewResponseID(courseID), nil
+	return &dto.ResponseID{ID: courseID}, nil
 }
 
 func (s *courseService) DeleteCourse(userID string, courseID int64) error {

@@ -9,9 +9,3 @@ type Response struct {
 type ResponseID struct {
 	ID any `json:"id"`
 }
-
-func NewResponseID(id any) *ResponseID {
-	return &ResponseID{
-		ID: id,
-	}
-}
