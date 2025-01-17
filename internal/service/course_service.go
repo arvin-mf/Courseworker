@@ -6,22 +6,31 @@ import (
 	"courseworker/internal/repository"
 	_error "courseworker/pkg/error"
 	"database/sql"
+	"log"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
 type CourseService interface {
 	GetCoursesOfUser(userID string) ([]dto.CourseResponse, error)
 	GetCourseByID(userID string, courseID int64) (*dto.CourseResponse, error)
-	CreateCourse(userID string, arg dto.CourseCreateUpdateReq) (*dto.ResponseID, error)
+	CreateCourse(c *gin.Context, userID string, arg dto.CourseCreateUpdateReq) (*dto.ResponseID, error)
 	UpdateCourse(userID string, courseID int64, arg dto.CourseCreateUpdateReq) (*dto.ResponseID, error)
 	DeleteCourse(userID string, courseID int64) error
 }
 
 type courseService struct {
 	repo repository.CourseRepository
+	rd   *redis.Client
 }
 
-func NewCourseService(r repository.CourseRepository) CourseService {
-	return &courseService{r}
+func NewCourseService(r repository.CourseRepository, rdc *redis.Client) CourseService {
+	return &courseService{
+		repo: r,
+		rd:   rdc,
+	}
 }
 
 func (s *courseService) GetCoursesOfUser(userID string) ([]dto.CourseResponse, error) {
@@ -47,7 +56,7 @@ func (s *courseService) GetCourseByID(userID string, courseID int64) (*dto.Cours
 	return dto.ToCourseResponse(course), nil
 }
 
-func (s *courseService) CreateCourse(userID string, arg dto.CourseCreateUpdateReq) (*dto.ResponseID, error) {
+func (s *courseService) CreateCourse(c *gin.Context, userID string, arg dto.CourseCreateUpdateReq) (*dto.ResponseID, error) {
 	const op _error.Op = "serv/CreateCourse"
 	result, err := s.repo.CreateCourse(sqlc.CreateCourseParams{
 		Name:    arg.Name,
@@ -57,10 +66,18 @@ func (s *courseService) CreateCourse(userID string, arg dto.CourseCreateUpdateRe
 	if err != nil {
 		return nil, _error.E(op, _error.Title("Failed to create course"), err)
 	}
+
 	id, err := result.LastInsertId()
 	if err != nil {
 		return nil, _error.E(op, _error.Title("Failed to get new id"), err)
 	}
+
+	ctx := c.Request.Context()
+	key := "course:" + strconv.Itoa(int(id))
+	if err = s.rd.Set(ctx, key, userID, 0).Err(); err != nil {
+		log.Printf("Redis Set failed: %v", err)
+	}
+
 	return dto.NewResponseID(id), nil
 }
 

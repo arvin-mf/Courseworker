@@ -4,6 +4,7 @@ import (
 	"courseworker/config"
 	"courseworker/internal/handler"
 	"log"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
@@ -23,9 +24,16 @@ func main() {
 	}
 	defer db.Close()
 
+	redisClient := config.NewRedisClient()
+	defer redisClient.Close()
+
 	r := gin.Default()
+	handler.StartEngine(r, db, redisClient)
 
-	handler.StartEngine(r, db)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8000"
+	}
 
-	r.Run(":8000")
+	r.Run(":" + port)
 }

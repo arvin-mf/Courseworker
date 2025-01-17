@@ -32,6 +32,7 @@ const (
 	Forbidden                  // Error due to insufficient permissions
 	Database                   // Database-related error
 	Internal                   // Internal server error
+	Cache                      // Cache-database-related error
 )
 
 // String returns the string representation of an error Kind.
@@ -53,6 +54,8 @@ func (k Kind) String() string {
 		return "database_error"
 	case Internal:
 		return "internal_server_error"
+	case Cache:
+		return "cache_error"
 	default:
 		return "unknown_error_kind"
 	}

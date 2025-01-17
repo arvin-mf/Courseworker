@@ -1,10 +1,14 @@
 package config
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+
+	"github.com/redis/go-redis/v9"
 )
 
 func SetupDB() (*sql.DB, error) {
@@ -26,4 +30,24 @@ func SetupDB() (*sql.DB, error) {
 
 	log.Println("Connected to the database successfully")
 	return db, nil
+}
+
+func NewRedisClient() *redis.Client {
+	db, err := strconv.Atoi(os.Getenv("REDIS_DB"))
+	if err != nil {
+		panic("REDIS_DB must be a number")
+	}
+
+	rdc := redis.NewClient(&redis.Options{
+		Addr:     os.Getenv("REDIS_ADDR"),
+		Password: os.Getenv("REDIS_PASS"),
+		DB:       db,
+	})
+
+	_, err = rdc.Ping(context.Background()).Result()
+	if err != nil {
+		log.Fatalf("Failed to connect to Redis: %v", err)
+	}
+
+	return rdc
 }

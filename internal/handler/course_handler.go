@@ -64,7 +64,7 @@ func (h *CourseHandler) CreateCourse(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.serv.CreateCourse(claims.ID, req)
+	resp, err := h.serv.CreateCourse(c, claims.ID, req)
 	if err != nil {
 		response.HttpError(c, err)
 		return

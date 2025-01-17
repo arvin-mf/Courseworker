@@ -8,6 +8,7 @@ import (
 	"database/sql"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
 func route(r *gin.Engine, uh *UserHandler, ch *CourseHandler) {
@@ -26,7 +27,7 @@ func route(r *gin.Engine, uh *UserHandler, ch *CourseHandler) {
 	r.DELETE("/courses/:courseId", middleware.ValidateToken(), ch.DeleteCourse)
 }
 
-func InitHandler(db *sql.DB) (*UserHandler, *CourseHandler) {
+func InitHandler(db *sql.DB, rd *redis.Client) (*UserHandler, *CourseHandler) {
 	queries := sqlc.New(db)
 
 	userRepo := repository.NewUserRepository(queries)
@@ -34,13 +35,13 @@ func InitHandler(db *sql.DB) (*UserHandler, *CourseHandler) {
 	userHand := NewUserHandler(userServ)
 
 	courseRepo := repository.NewCourseRepository(queries)
-	courseServ := service.NewCourseService(courseRepo)
+	courseServ := service.NewCourseService(courseRepo, rd)
 	courseHand := NewCourseHandler(courseServ)
 
 	return userHand, courseHand
 }
 
-func StartEngine(r *gin.Engine, db *sql.DB) {
-	uh, ch := InitHandler(db)
+func StartEngine(r *gin.Engine, db *sql.DB, rd *redis.Client) {
+	uh, ch := InitHandler(db, rd)
 	route(r, uh, ch)
 }
