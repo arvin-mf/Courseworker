@@ -15,3 +15,6 @@ WHERE id = ?;
 
 -- name: DeleteCourse :execresult
 DELETE FROM courses WHERE id = ?;
+
+-- name: GetUserIDFromCourse :one
+SELECT user_id FROM courses WHERE id = ?;

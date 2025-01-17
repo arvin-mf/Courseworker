@@ -15,6 +15,7 @@ type CourseRepository interface {
 	CreateCourse(param sqlc.CreateCourseParams) (sql.Result, error)
 	UpdateCourse(param sqlc.UpdateCourseParams) (sql.Result, error)
 	DeleteCourse(courseID int64) (sql.Result, error)
+	GetUserIDFromCourse(courseID int64) (string, error)
 }
 
 type courseRepository struct {
@@ -82,6 +83,21 @@ func (r *courseRepository) DeleteCourse(courseID int64) (sql.Result, error) {
 			op, _error.Title("No row affected"),
 			fmt.Sprintf("The requested course with id %d could not be found", courseID),
 		)
+	}
+	return result, nil
+}
+
+func (r *courseRepository) GetUserIDFromCourse(courseID int64) (string, error) {
+	const op _error.Op = "repo/GetUserIDFromCourse"
+	result, err := r.db.GetUserIDFromCourse(context.Background(), courseID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", _error.E(
+				op, _error.NotExist, _error.Title("Course not found"),
+				fmt.Sprintf("The requested course with id %d could not be found", courseID),
+			)
+		}
+		return "", _error.E(op, _error.Database, err)
 	}
 	return result, nil
 }

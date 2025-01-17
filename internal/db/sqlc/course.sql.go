@@ -85,6 +85,17 @@ func (q *Queries) GetCourseByID(ctx context.Context, id int64) (Course, error) {
 	return i, err
 }
 
+const getUserIDFromCourse = `-- name: GetUserIDFromCourse :one
+SELECT user_id FROM courses WHERE id = ?
+`
+
+func (q *Queries) GetUserIDFromCourse(ctx context.Context, id int64) (string, error) {
+	row := q.db.QueryRowContext(ctx, getUserIDFromCourse, id)
+	var user_id string
+	err := row.Scan(&user_id)
+	return user_id, err
+}
+
 const updateCourse = `-- name: UpdateCourse :execresult
 UPDATE courses
 SET name = ?, subname = ?

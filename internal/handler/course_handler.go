@@ -46,7 +46,7 @@ func (h *CourseHandler) GetCourseByID(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.serv.GetCourseByID(claims.ID, int64(courseID))
+	resp, err := h.serv.GetCourseByID(c, claims.ID, int64(courseID))
 	if err != nil {
 		response.HttpError(c, err)
 		return
@@ -92,7 +92,7 @@ func (h *CourseHandler) UpdateCourse(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.serv.UpdateCourse(claims.ID, int64(courseID), req)
+	resp, err := h.serv.UpdateCourse(c, claims.ID, int64(courseID), req)
 	if err != nil {
 		response.HttpError(c, err)
 		return
@@ -114,7 +114,7 @@ func (h *CourseHandler) DeleteCourse(c *gin.Context) {
 		return
 	}
 
-	if err := h.serv.DeleteCourse(claims.ID, int64(courseID)); err != nil {
+	if err := h.serv.DeleteCourse(c, claims.ID, int64(courseID)); err != nil {
 		response.HttpError(c, err)
 		return
 	}

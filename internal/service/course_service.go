@@ -6,6 +6,7 @@ import (
 	"courseworker/internal/repository"
 	_error "courseworker/pkg/error"
 	"database/sql"
+	"fmt"
 	"log"
 	"strconv"
 
@@ -15,10 +16,10 @@ import (
 
 type CourseService interface {
 	GetCoursesOfUser(userID string) ([]dto.CourseResponse, error)
-	GetCourseByID(userID string, courseID int64) (*dto.CourseResponse, error)
+	GetCourseByID(c *gin.Context, userID string, courseID int64) (*dto.CourseResponse, error)
 	CreateCourse(c *gin.Context, userID string, arg dto.CourseCreateUpdateReq) (*dto.ResponseID, error)
-	UpdateCourse(userID string, courseID int64, arg dto.CourseCreateUpdateReq) (*dto.ResponseID, error)
-	DeleteCourse(userID string, courseID int64) error
+	UpdateCourse(c *gin.Context, userID string, courseID int64, arg dto.CourseCreateUpdateReq) (*dto.ResponseID, error)
+	DeleteCourse(c *gin.Context, userID string, courseID int64) error
 }
 
 type courseService struct {
@@ -42,8 +43,39 @@ func (s *courseService) GetCoursesOfUser(userID string) ([]dto.CourseResponse, e
 	return dto.ToCourseResponses(&courses), nil
 }
 
-func (s *courseService) GetCourseByID(userID string, courseID int64) (*dto.CourseResponse, error) {
+func (s *courseService) validateOwnershipCourse(c *gin.Context, authUserID string, courseID int64) error {
+	const op _error.Op = "serv/validateOwnershipCourse"
+
+	var value string
+	key := "course:" + strconv.Itoa(int(courseID))
+	value, err := s.rd.Get(c, key).Result()
+	if err != nil {
+		log.Printf("Redis Get failed: %v", err)
+		value, err = s.repo.GetUserIDFromCourse(courseID)
+		if err != nil {
+			return _error.E(op, _error.Title("Failed to get userID"), err)
+		}
+		if err = s.rd.Set(c, key, value, 0).Err(); err != nil {
+			log.Printf("Redis Set failed: %v", err)
+		}
+	}
+
+	if authUserID != value {
+		return _error.E(
+			op, _error.Forbidden, _error.Title("Forbidden action"),
+			fmt.Sprintf("The requested course with id %d does not belong to user", courseID),
+		)
+	}
+	return nil
+}
+
+func (s *courseService) GetCourseByID(c *gin.Context, userID string, courseID int64) (*dto.CourseResponse, error) {
 	const op _error.Op = "serv/GetCourseByID"
+
+	if err := s.validateOwnershipCourse(c, userID, courseID); err != nil {
+		return nil, _error.E(op, _error.Forbidden, _error.Title("Forbidden action"), err)
+	}
+
 	course, err := s.repo.GetCourseByID(courseID)
 	if err != nil {
 		return nil, _error.E(op, _error.Title("Failed to get course"), err)
@@ -81,10 +113,12 @@ func (s *courseService) CreateCourse(c *gin.Context, userID string, arg dto.Cour
 	return &dto.ResponseID{ID: id}, nil
 }
 
-func (s *courseService) UpdateCourse(userID string, courseID int64, arg dto.CourseCreateUpdateReq) (*dto.ResponseID, error) {
+func (s *courseService) UpdateCourse(c *gin.Context, userID string, courseID int64, arg dto.CourseCreateUpdateReq) (*dto.ResponseID, error) {
 	const op _error.Op = "serv/UpdateCourse"
 
-	// check course owner
+	if err := s.validateOwnershipCourse(c, userID, courseID); err != nil {
+		return nil, _error.E(op, _error.Forbidden, _error.Title("Forbidden action"), err)
+	}
 
 	_, err := s.repo.UpdateCourse(sqlc.UpdateCourseParams{
 		Name:    arg.Name,
@@ -97,14 +131,22 @@ func (s *courseService) UpdateCourse(userID string, courseID int64, arg dto.Cour
 	return &dto.ResponseID{ID: courseID}, nil
 }
 
-func (s *courseService) DeleteCourse(userID string, courseID int64) error {
+func (s *courseService) DeleteCourse(c *gin.Context, userID string, courseID int64) error {
 	const op _error.Op = "serv/DeleteCourse"
 
-	// check course owner
+	if err := s.validateOwnershipCourse(c, userID, courseID); err != nil {
+		return _error.E(op, _error.Forbidden, _error.Title("Forbidden action"), err)
+	}
 
 	_, err := s.repo.DeleteCourse(courseID)
 	if err != nil {
 		return _error.E(op, _error.Title("Failed to delete course"), err)
 	}
+
+	key := "course:" + strconv.Itoa(int(courseID))
+	if err := s.rd.Del(c, key).Err(); err != nil {
+		log.Println("Failed delete data from Redis")
+	}
+
 	return nil
 }
