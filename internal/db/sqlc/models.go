@@ -6,6 +6,7 @@ package sqlc
 
 import (
 	"database/sql"
+	"time"
 )
 
 type Course struct {
@@ -15,6 +16,27 @@ type Course struct {
 	UserID    string
 	CreatedAt sql.NullTime
 	UpdatedAt sql.NullTime
+}
+
+type Task struct {
+	ID          string
+	CourseID    int64
+	IsDone      bool
+	Title       string
+	Description sql.NullString
+	Image       sql.NullString
+	Type        string
+	Deadline    sql.NullTime
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+type TaskNote struct {
+	ID        int64
+	TaskID    string
+	Text      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type User struct {
