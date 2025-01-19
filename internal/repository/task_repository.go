@@ -14,6 +14,7 @@ type TaskRepository interface {
 	GetTasksByCourse(courseID int64) ([]sqlc.Task, error)
 	GetTaskByID(taskID string) (*sqlc.Task, error)
 	GetUserIDFromTask(param sqlc.GetUserIDFromTaskParams) (string, error)
+	CreateTask(param sqlc.CreateTaskParams) (sql.Result, error)
 }
 
 type taskRepository struct {
@@ -68,6 +69,15 @@ func (r *taskRepository) GetUserIDFromTask(param sqlc.GetUserIDFromTaskParams) (
 			)
 		}
 		return "", nil
+	}
+	return result, nil
+}
+
+func (r *taskRepository) CreateTask(param sqlc.CreateTaskParams) (sql.Result, error) {
+	const op _error.Op = "repo/CreateTask"
+	result, err := r.db.CreateTask(context.Background(), param)
+	if err != nil {
+		return nil, _error.E(op, _error.Database, err)
 	}
 	return result, nil
 }

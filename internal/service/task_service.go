@@ -5,10 +5,13 @@ import (
 	"courseworker/internal/dto"
 	"courseworker/internal/repository"
 	_error "courseworker/pkg/error"
+	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -16,6 +19,7 @@ type TaskService interface {
 	GetAllTasksOfUser(authUserID string) ([]dto.TaskResponse, error)
 	GetTasksByCourseID(c *gin.Context, authUserID string, courseID int64) ([]dto.TaskResponse, error)
 	GetTaskByID(c *gin.Context, authUserID, taskID string, courseID int64) (*dto.TaskResponse, error)
+	CreateTask(c *gin.Context, authUserID string, courseID int64, req dto.TaskCreateReq) (*dto.ResponseID, error)
 }
 
 type taskService struct {
@@ -96,4 +100,30 @@ func (s *taskService) ValidateOwnershipTask(c *gin.Context, authUserID, taskID s
 		)
 	}
 	return nil
+}
+
+func (s *taskService) CreateTask(c *gin.Context, authUserID string, courseID int64, req dto.TaskCreateReq) (*dto.ResponseID, error) {
+	const op _error.Op = "serv/CreateTask"
+
+	if err := s.cs.ValidateOwnershipCourse(c, authUserID, courseID); err != nil {
+		return nil, _error.E(op, _error.Forbidden, _error.Title("Forbidden action"), err)
+	}
+
+	deadline, err := time.Parse("2006-01-02 15:04", req.Deadline)
+	if err != nil {
+		return nil, _error.E(op, _error.Title("Failed to create task"), err)
+	}
+	param := sqlc.CreateTaskParams{
+		ID:          uuid.New().String(),
+		CourseID:    courseID,
+		Title:       req.Title,
+		Type:        req.Type,
+		Description: sql.NullString{String: req.Description, Valid: true},
+		Deadline:    sql.NullTime{Time: deadline, Valid: true},
+	}
+	_, err = s.repo.CreateTask(param)
+	if err != nil {
+		return nil, _error.E(op, _error.Title("Failed to create task"), err)
+	}
+	return &dto.ResponseID{ID: param.ID}, nil
 }

@@ -29,6 +29,7 @@ func route(r *gin.Engine, uh *UserHandler, ch *CourseHandler, th *TaskHandler) {
 	r.GET("/courses/tasks", middleware.ValidateToken(), th.GetAllTasks)
 	r.GET("/courses/:courseId/tasks", middleware.ValidateToken(), th.GetTasksByCourse)
 	r.GET("/courses/:courseId/tasks/:taskId", middleware.ValidateToken(), th.GetTaskByID)
+	r.POST("/courses/:courseId/tasks", middleware.ValidateToken(), th.CreateTask)
 }
 
 func InitHandler(db *sql.DB, rd *redis.Client) (*UserHandler, *CourseHandler, *TaskHandler) {

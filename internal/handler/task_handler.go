@@ -73,3 +73,29 @@ func (h *TaskHandler) GetTaskByID(c *gin.Context) {
 	}
 	response.Success(c, http.StatusOK, taskFetchSuccess, resp)
 }
+
+func (h *TaskHandler) CreateTask(c *gin.Context) {
+	auth, _ := c.Get("user")
+	claims := auth.(*dto.UserClaims)
+
+	courseID, err := strconv.Atoi(c.Param("courseId"))
+	if err != nil {
+		response.HttpError(c, _error.E(
+			_error.Op("hand/GetTaskByID"), _error.InvalidRequest,
+			_error.Title("Failed to get tasks"), "courseId must be a number",
+		))
+		return
+	}
+
+	var req dto.TaskCreateReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.HttpBindingError(c, err, req)
+	}
+
+	resp, err := h.serv.CreateTask(c, claims.ID, int64(courseID), req)
+	if err != nil {
+		response.HttpError(c, err)
+		return
+	}
+	response.Success(c, http.StatusCreated, taskCreateSuccess, resp)
+}
