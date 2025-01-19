@@ -99,3 +99,24 @@ func (h *TaskHandler) CreateTask(c *gin.Context) {
 	}
 	response.Success(c, http.StatusCreated, taskCreateSuccess, resp)
 }
+
+func (h *TaskHandler) DeleteTask(c *gin.Context) {
+	auth, _ := c.Get("user")
+	claims := auth.(*dto.UserClaims)
+
+	taskID := c.Param("taskId")
+	courseID, err := strconv.Atoi(c.Param("courseId"))
+	if err != nil {
+		response.HttpError(c, _error.E(
+			_error.Op("hand/GetTaskByID"), _error.InvalidRequest,
+			_error.Title("Failed to get tasks"), "courseId must be a number",
+		))
+		return
+	}
+
+	if err = h.serv.DeleteTask(c, claims.ID, taskID, int64(courseID)); err != nil {
+		response.HttpError(c, err)
+		return
+	}
+	response.Success(c, http.StatusOK, taskDeleteSuccess, nil)
+}

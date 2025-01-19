@@ -15,6 +15,7 @@ type TaskRepository interface {
 	GetTaskByID(taskID string) (*sqlc.Task, error)
 	GetUserIDFromTask(param sqlc.GetUserIDFromTaskParams) (string, error)
 	CreateTask(param sqlc.CreateTaskParams) (sql.Result, error)
+	DeleteTask(taskID string) (sql.Result, error)
 }
 
 type taskRepository struct {
@@ -78,6 +79,25 @@ func (r *taskRepository) CreateTask(param sqlc.CreateTaskParams) (sql.Result, er
 	result, err := r.db.CreateTask(context.Background(), param)
 	if err != nil {
 		return nil, _error.E(op, _error.Database, err)
+	}
+	return result, nil
+}
+
+func (r *taskRepository) DeleteTask(taskID string) (sql.Result, error) {
+	const op _error.Op = "repo/DeleteTask"
+	result, err := r.db.DeleteTask(context.Background(), taskID)
+	if err != nil {
+		return nil, _error.E(op, _error.Database, err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return nil, _error.E(op, _error.Database, err)
+	}
+	if affected == 0 {
+		return nil, _error.E(
+			op, _error.Title("No row affected"),
+			fmt.Sprintf("The requested task with id %s could not be found", taskID),
+		)
 	}
 	return result, nil
 }

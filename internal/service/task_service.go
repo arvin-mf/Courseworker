@@ -20,6 +20,7 @@ type TaskService interface {
 	GetTasksByCourseID(c *gin.Context, authUserID string, courseID int64) ([]dto.TaskResponse, error)
 	GetTaskByID(c *gin.Context, authUserID, taskID string, courseID int64) (*dto.TaskResponse, error)
 	CreateTask(c *gin.Context, authUserID string, courseID int64, req dto.TaskCreateReq) (*dto.ResponseID, error)
+	DeleteTask(c *gin.Context, authUserID, taskID string, courseID int64) error
 }
 
 type taskService struct {
@@ -125,5 +126,31 @@ func (s *taskService) CreateTask(c *gin.Context, authUserID string, courseID int
 	if err != nil {
 		return nil, _error.E(op, _error.Title("Failed to create task"), err)
 	}
+
+	key := "task:" + authUserID
+	if err = s.rd.Set(c, key, authUserID, 0).Err(); err != nil {
+		log.Printf("Redis Set failed: %v", err)
+	}
+
 	return &dto.ResponseID{ID: param.ID}, nil
+}
+
+func (s *taskService) DeleteTask(c *gin.Context, authUserID, taskID string, courseID int64) error {
+	const op _error.Op = "serv/DeleteTask"
+
+	if err := s.ValidateOwnershipTask(c, authUserID, taskID, courseID); err != nil {
+		return _error.E(op, _error.Forbidden, _error.Title("Failed to delete task"), err)
+	}
+
+	_, err := s.repo.DeleteTask(taskID)
+	if err != nil {
+		return _error.E(op, _error.Title("Failed to delete task"), err)
+	}
+
+	key := "task:" + taskID
+	if err = s.rd.Del(c, key).Err(); err != nil {
+		log.Printf("Redis Delete failed: %v", err)
+	}
+
+	return nil
 }

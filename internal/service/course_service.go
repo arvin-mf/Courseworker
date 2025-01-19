@@ -146,7 +146,7 @@ func (s *courseService) DeleteCourse(c *gin.Context, userID string, courseID int
 
 	key := "course:" + strconv.Itoa(int(courseID))
 	if err := s.rd.Del(c, key).Err(); err != nil {
-		log.Println("Failed delete data from Redis")
+		log.Printf("Redis Delete failed: %v", err)
 	}
 
 	return nil
