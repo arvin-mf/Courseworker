@@ -11,7 +11,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func route(r *gin.Engine, uh *UserHandler, ch *CourseHandler) {
+func route(r *gin.Engine, uh *UserHandler, ch *CourseHandler, th *TaskHandler) {
 	r.GET("/users", uh.GetUsers)
 	r.GET("/users/:userId", uh.GetUserByID)
 	r.GET("/auth/google/login-w-google", uh.LoginWithGoogle)
@@ -25,9 +25,12 @@ func route(r *gin.Engine, uh *UserHandler, ch *CourseHandler) {
 	r.POST("/courses", middleware.ValidateToken(), ch.CreateCourse)
 	r.PUT("/courses/:courseId", middleware.ValidateToken(), ch.UpdateCourse)
 	r.DELETE("/courses/:courseId", middleware.ValidateToken(), ch.DeleteCourse)
+
+	r.GET("/courses/tasks", middleware.ValidateToken(), th.GetAllTasks)
+	r.GET("/courses/:courseId/tasks", middleware.ValidateToken(), th.GetTasksByCourse)
 }
 
-func InitHandler(db *sql.DB, rd *redis.Client) (*UserHandler, *CourseHandler) {
+func InitHandler(db *sql.DB, rd *redis.Client) (*UserHandler, *CourseHandler, *TaskHandler) {
 	queries := sqlc.New(db)
 
 	userRepo := repository.NewUserRepository(queries)
@@ -38,10 +41,14 @@ func InitHandler(db *sql.DB, rd *redis.Client) (*UserHandler, *CourseHandler) {
 	courseServ := service.NewCourseService(courseRepo, rd)
 	courseHand := NewCourseHandler(courseServ)
 
-	return userHand, courseHand
+	taskRepo := repository.NewTaskRepository(queries)
+	taskServ := service.NewTaskService(taskRepo, rd, courseServ)
+	taskHand := NewTaskHandler(taskServ)
+
+	return userHand, courseHand, taskHand
 }
 
 func StartEngine(r *gin.Engine, db *sql.DB, rd *redis.Client) {
-	uh, ch := InitHandler(db, rd)
-	route(r, uh, ch)
+	uh, ch, th := InitHandler(db, rd)
+	route(r, uh, ch, th)
 }

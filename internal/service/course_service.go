@@ -20,6 +20,7 @@ type CourseService interface {
 	CreateCourse(c *gin.Context, userID string, arg dto.CourseCreateUpdateReq) (*dto.ResponseID, error)
 	UpdateCourse(c *gin.Context, userID string, courseID int64, arg dto.CourseCreateUpdateReq) (*dto.ResponseID, error)
 	DeleteCourse(c *gin.Context, userID string, courseID int64) error
+	ValidateOwnershipCourse(c *gin.Context, authUserID string, courseID int64) error
 }
 
 type courseService struct {
@@ -43,7 +44,7 @@ func (s *courseService) GetCoursesOfUser(userID string) ([]dto.CourseResponse, e
 	return dto.ToCourseResponses(&courses), nil
 }
 
-func (s *courseService) validateOwnershipCourse(c *gin.Context, authUserID string, courseID int64) error {
+func (s *courseService) ValidateOwnershipCourse(c *gin.Context, authUserID string, courseID int64) error {
 	const op _error.Op = "serv/validateOwnershipCourse"
 
 	var value string
@@ -72,7 +73,7 @@ func (s *courseService) validateOwnershipCourse(c *gin.Context, authUserID strin
 func (s *courseService) GetCourseByID(c *gin.Context, userID string, courseID int64) (*dto.CourseResponse, error) {
 	const op _error.Op = "serv/GetCourseByID"
 
-	if err := s.validateOwnershipCourse(c, userID, courseID); err != nil {
+	if err := s.ValidateOwnershipCourse(c, userID, courseID); err != nil {
 		return nil, _error.E(op, _error.Forbidden, _error.Title("Forbidden action"), err)
 	}
 
@@ -116,7 +117,7 @@ func (s *courseService) CreateCourse(c *gin.Context, userID string, arg dto.Cour
 func (s *courseService) UpdateCourse(c *gin.Context, userID string, courseID int64, arg dto.CourseCreateUpdateReq) (*dto.ResponseID, error) {
 	const op _error.Op = "serv/UpdateCourse"
 
-	if err := s.validateOwnershipCourse(c, userID, courseID); err != nil {
+	if err := s.ValidateOwnershipCourse(c, userID, courseID); err != nil {
 		return nil, _error.E(op, _error.Forbidden, _error.Title("Forbidden action"), err)
 	}
 
@@ -134,7 +135,7 @@ func (s *courseService) UpdateCourse(c *gin.Context, userID string, courseID int
 func (s *courseService) DeleteCourse(c *gin.Context, userID string, courseID int64) error {
 	const op _error.Op = "serv/DeleteCourse"
 
-	if err := s.validateOwnershipCourse(c, userID, courseID); err != nil {
+	if err := s.ValidateOwnershipCourse(c, userID, courseID); err != nil {
 		return _error.E(op, _error.Forbidden, _error.Title("Forbidden action"), err)
 	}
 
