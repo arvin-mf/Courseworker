@@ -7,6 +7,7 @@ const (
 	courseUpdateSuccess = "Course successfully updated"
 	courseDeleteSuccess = "Course successfully deleted"
 
+	taskFetchSuccess  = "Task successfully retrieved"
 	tasksFetchSuccess = "Tasks successfully retrieved"
 
 	userFetchSuccess    = "User successfully retrieved"

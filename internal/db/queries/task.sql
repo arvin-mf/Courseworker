@@ -12,7 +12,7 @@ SELECT * FROM tasks WHERE id = ?;
 -- name: GetUserIDFromTask :one
 SELECT c.user_id FROM courses c
 INNER JOIN tasks t ON t.course_id = c.id
-WHERE t.id = ?;
+WHERE t.id = sqlc.arg(task_id) AND c.id = sqlc.arg(course_id);
 
 -- name: CreateTask :execresult
 INSERT INTO tasks (id, course_id, title, type, description, deadline)

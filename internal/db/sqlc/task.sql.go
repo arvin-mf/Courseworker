@@ -159,11 +159,16 @@ func (q *Queries) GetTasksByCourseID(ctx context.Context, courseID int64) ([]Tas
 const getUserIDFromTask = `-- name: GetUserIDFromTask :one
 SELECT c.user_id FROM courses c
 INNER JOIN tasks t ON t.course_id = c.id
-WHERE t.id = ?
+WHERE t.id = ? AND c.id = ?
 `
 
-func (q *Queries) GetUserIDFromTask(ctx context.Context, id string) (string, error) {
-	row := q.db.QueryRowContext(ctx, getUserIDFromTask, id)
+type GetUserIDFromTaskParams struct {
+	TaskID   string
+	CourseID int64
+}
+
+func (q *Queries) GetUserIDFromTask(ctx context.Context, arg GetUserIDFromTaskParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getUserIDFromTask, arg.TaskID, arg.CourseID)
 	var user_id string
 	err := row.Scan(&user_id)
 	return user_id, err

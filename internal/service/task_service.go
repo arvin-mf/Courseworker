@@ -1,9 +1,12 @@
 package service
 
 import (
+	"courseworker/internal/db/sqlc"
 	"courseworker/internal/dto"
 	"courseworker/internal/repository"
 	_error "courseworker/pkg/error"
+	"fmt"
+	"log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -12,6 +15,7 @@ import (
 type TaskService interface {
 	GetAllTasksOfUser(authUserID string) ([]dto.TaskResponse, error)
 	GetTasksByCourseID(c *gin.Context, authUserID string, courseID int64) ([]dto.TaskResponse, error)
+	GetTaskByID(c *gin.Context, authUserID, taskID string, courseID int64) (*dto.TaskResponse, error)
 }
 
 type taskService struct {
@@ -51,10 +55,10 @@ func (s *taskService) GetTasksByCourseID(c *gin.Context, authUserID string, cour
 	return dto.ToTaskResponses(&tasks), nil
 }
 
-func (s *taskService) GetTaskByID(c *gin.Context, authUserID, taskID string) (*dto.TaskResponse, error) {
+func (s *taskService) GetTaskByID(c *gin.Context, authUserID, taskID string, courseID int64) (*dto.TaskResponse, error) {
 	const op _error.Op = "serv/GetTaskByID"
 
-	if err := s.ValidateOwnershipTask(c, authUserID, taskID); err != nil {
+	if err := s.ValidateOwnershipTask(c, authUserID, taskID, courseID); err != nil {
 		return nil, _error.E(op, _error.Forbidden, _error.Title("Failed to get task"), err)
 	}
 
@@ -63,4 +67,33 @@ func (s *taskService) GetTaskByID(c *gin.Context, authUserID, taskID string) (*d
 		return nil, _error.E(op, _error.Title("Failed to get task"), err)
 	}
 	return dto.ToTaskResponse(task), nil
+}
+
+func (s *taskService) ValidateOwnershipTask(c *gin.Context, authUserID, taskID string, courseID int64) error {
+	const op _error.Op = "serv/validateOwnershipTask"
+
+	var value string
+	key := "task:" + taskID
+	value, err := s.rd.Get(c, key).Result()
+	if err != nil {
+		log.Printf("Redis Get failed: %v", err)
+		value, err = s.repo.GetUserIDFromTask(sqlc.GetUserIDFromTaskParams{
+			TaskID:   taskID,
+			CourseID: courseID,
+		})
+		if err != nil {
+			return _error.E(op, _error.Cache, _error.Title("Failed to get userID"), err)
+		}
+		if err = s.rd.Set(c, key, value, 0).Err(); err != nil {
+			log.Printf("Redis Set failed: %v", err)
+		}
+	}
+
+	if authUserID != value {
+		return _error.E(
+			op, _error.Forbidden, _error.Title("Forbidden action"),
+			fmt.Sprintf("The requested task with id %s does not belong to user", taskID),
+		)
+	}
+	return nil
 }

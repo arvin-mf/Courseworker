@@ -53,5 +53,23 @@ func (h *TaskHandler) GetTasksByCourse(c *gin.Context) {
 }
 
 func (h *TaskHandler) GetTaskByID(c *gin.Context) {
+	auth, _ := c.Get("user")
+	claims := auth.(*dto.UserClaims)
 
+	taskID := c.Param("taskId")
+	courseID, err := strconv.Atoi(c.Param("courseId"))
+	if err != nil {
+		response.HttpError(c, _error.E(
+			_error.Op("hand/GetTaskByID"), _error.InvalidRequest,
+			_error.Title("Failed to get tasks"), "courseId must be a number",
+		))
+		return
+	}
+
+	resp, err := h.serv.GetTaskByID(c, claims.ID, taskID, int64(courseID))
+	if err != nil {
+		response.HttpError(c, err)
+		return
+	}
+	response.Success(c, http.StatusOK, taskFetchSuccess, resp)
 }
