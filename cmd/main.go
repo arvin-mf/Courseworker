@@ -29,7 +29,7 @@ func main() {
 	r := gin.Default()
 	handler.StartEngine(r, db, redisClient)
 
-	port := os.Getenv("PORT")
+	port := os.Getenv("APP_PORT")
 	if port == "" {
 		port = "8000"
 	}

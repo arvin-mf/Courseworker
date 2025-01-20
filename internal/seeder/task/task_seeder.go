@@ -35,7 +35,7 @@ func main() {
 	repo_c := repository.NewCourseRepository(queries)
 	repo_u := repository.NewUserRepository(queries)
 
-	fmt.Println("User's email: ")
+	fmt.Print("User's email: ")
 	var email string
 	fmt.Scan(&email)
 
