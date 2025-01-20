@@ -57,7 +57,7 @@ func (q *Queries) DeleteTask(ctx context.Context, id string) (sql.Result, error)
 }
 
 const getAllTasks = `-- name: GetAllTasks :many
-SELECT t.id, t.course_id, t.is_done, t.title, t.description, t.image, t.type, t.deadline, t.created_at, t.updated_at FROM tasks t
+SELECT t.id, t.course_id, t.is_done, t.title, t.description, t.image, t.type, t.deadline, t.created_at, t.updated_at, t.highlight FROM tasks t
 INNER JOIN courses c ON t.course_id = c.id
 WHERE c.user_id = ?
 `
@@ -82,6 +82,7 @@ func (q *Queries) GetAllTasks(ctx context.Context, userID string) ([]Task, error
 			&i.Deadline,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Highlight,
 		); err != nil {
 			return nil, err
 		}
@@ -97,7 +98,7 @@ func (q *Queries) GetAllTasks(ctx context.Context, userID string) ([]Task, error
 }
 
 const getTaskByID = `-- name: GetTaskByID :one
-SELECT id, course_id, is_done, title, description, image, type, deadline, created_at, updated_at FROM tasks WHERE id = ?
+SELECT id, course_id, is_done, title, description, image, type, deadline, created_at, updated_at, highlight FROM tasks WHERE id = ?
 `
 
 func (q *Queries) GetTaskByID(ctx context.Context, id string) (Task, error) {
@@ -114,12 +115,13 @@ func (q *Queries) GetTaskByID(ctx context.Context, id string) (Task, error) {
 		&i.Deadline,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Highlight,
 	)
 	return i, err
 }
 
 const getTasksByCourseID = `-- name: GetTasksByCourseID :many
-SELECT id, course_id, is_done, title, description, image, type, deadline, created_at, updated_at FROM tasks WHERE course_id = ?
+SELECT id, course_id, is_done, title, description, image, type, deadline, created_at, updated_at, highlight FROM tasks WHERE course_id = ?
 `
 
 func (q *Queries) GetTasksByCourseID(ctx context.Context, courseID int64) ([]Task, error) {
@@ -142,6 +144,7 @@ func (q *Queries) GetTasksByCourseID(ctx context.Context, courseID int64) ([]Tas
 			&i.Deadline,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Highlight,
 		); err != nil {
 			return nil, err
 		}
@@ -180,6 +183,19 @@ UPDATE tasks SET image = NULL WHERE id = ?
 
 func (q *Queries) RemoveImage(ctx context.Context, id string) (sql.Result, error) {
 	return q.db.ExecContext(ctx, removeImage, id)
+}
+
+const switchTaskHighlight = `-- name: SwitchTaskHighlight :execresult
+UPDATE tasks SET highlight = ? WHERE id = ?
+`
+
+type SwitchTaskHighlightParams struct {
+	Highlight bool
+	ID        string
+}
+
+func (q *Queries) SwitchTaskHighlight(ctx context.Context, arg SwitchTaskHighlightParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, switchTaskHighlight, arg.Highlight, arg.ID)
 }
 
 const updateTask = `-- name: UpdateTask :execresult

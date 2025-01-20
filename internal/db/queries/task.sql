@@ -29,5 +29,8 @@ UPDATE tasks SET image = ? WHERE id = ?;
 -- name: RemoveImage :execresult
 UPDATE tasks SET image = NULL WHERE id = ?;
 
+-- name: SwitchTaskHighlight :execresult
+UPDATE tasks SET highlight = ? WHERE id = ?;
+
 -- name: DeleteTask :execresult
 DELETE FROM tasks WHERE id = ?;

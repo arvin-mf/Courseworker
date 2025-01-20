@@ -1,0 +1,2 @@
+ALTER TABLE tasks
+    ADD COLUMN highlight TINYINT(1) NOT NULL DEFAULT FALSE AFTER deadline;

@@ -29,6 +29,7 @@ type Task struct {
 	Deadline    sql.NullTime
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+	Highlight   bool
 }
 
 type TaskNote struct {
