@@ -30,6 +30,7 @@ func main() {
 	wg.Add(2)
 
 	go func() {
+		defer wg.Done()
 		db, err := config.SetupDB()
 		if err != nil {
 			errChan <- fmt.Errorf("database intialization error: %w", err)
@@ -39,6 +40,7 @@ func main() {
 	}()
 
 	go func() {
+		defer wg.Done()
 		rdc, err := config.NewRedisClient()
 		if err != nil {
 			errChan <- fmt.Errorf("redis intialization error: %w", err)

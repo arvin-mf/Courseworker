@@ -16,6 +16,7 @@ type TaskRepository interface {
 	GetUserIDFromTask(param sqlc.GetUserIDFromTaskParams) (string, error)
 	CreateTask(param sqlc.CreateTaskParams) (sql.Result, error)
 	DeleteTask(taskID string) (sql.Result, error)
+	UpdateTaskHighlight(param sqlc.SwitchTaskHighlightParams) (sql.Result, error)
 }
 
 type taskRepository struct {
@@ -97,6 +98,26 @@ func (r *taskRepository) DeleteTask(taskID string) (sql.Result, error) {
 		return nil, _error.E(
 			op, _error.Title("No row affected"),
 			fmt.Sprintf("The requested task with id %s could not be found", taskID),
+		)
+	}
+	return result, nil
+}
+
+func (r *taskRepository) UpdateTaskHighlight(param sqlc.SwitchTaskHighlightParams) (sql.Result, error) {
+	const op _error.Op = "repo/UpdateTaskHighlight"
+	result, err := r.db.SwitchTaskHighlight(context.Background(), param)
+	if err != nil {
+		return nil, _error.E(op, _error.Database, err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return nil, _error.E(op, _error.Database, err)
+	}
+	if affected == 0 {
+		return nil, _error.E(
+			op, _error.InvalidRequest,
+			_error.Title("Failed to switch highlight"),
+			"There is no row affected by the query",
 		)
 	}
 	return result, nil

@@ -21,6 +21,7 @@ type TaskService interface {
 	GetTaskByID(c *gin.Context, authUserID, taskID string, courseID int64) (*dto.TaskResponse, error)
 	CreateTask(c *gin.Context, authUserID string, courseID int64, req dto.TaskCreateReq) (*dto.ResponseID, error)
 	DeleteTask(c *gin.Context, authUserID, taskID string, courseID int64) error
+	SwitchTaskHighlight(c *gin.Context, authUserID, taskID string, courseID int64) (*dto.ResponseID, error)
 }
 
 type taskService struct {
@@ -153,4 +154,26 @@ func (s *taskService) DeleteTask(c *gin.Context, authUserID, taskID string, cour
 	}
 
 	return nil
+}
+
+func (s *taskService) SwitchTaskHighlight(c *gin.Context, authUserID, taskID string, courseID int64) (*dto.ResponseID, error) {
+	const op _error.Op = "serv/SwitchTaskHighlight"
+
+	if err := s.ValidateOwnershipTask(c, authUserID, taskID, courseID); err != nil {
+		return nil, _error.E(op, _error.Forbidden, _error.Title("Forbidden action"), err)
+	}
+
+	task, err := s.repo.GetTaskByID(taskID)
+	if err != nil {
+		return nil, _error.E(op, _error.Title("Failed to get task"), err)
+	}
+	param := sqlc.SwitchTaskHighlightParams{
+		Highlight: !task.Highlight,
+		ID:        taskID,
+	}
+	_, err = s.repo.UpdateTaskHighlight(param)
+	if err != nil {
+		return nil, _error.E(op, _error.Title("Failed to update task"), err)
+	}
+	return &dto.ResponseID{ID: param.ID}, nil
 }

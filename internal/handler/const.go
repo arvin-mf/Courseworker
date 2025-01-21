@@ -10,6 +10,7 @@ const (
 	taskFetchSuccess  = "Task successfully retrieved"
 	tasksFetchSuccess = "Tasks successfully retrieved"
 	taskCreateSuccess = "Task successfully created"
+	taskUpdateSuccess = "Task successfully updated"
 	taskDeleteSuccess = "Task successfully deleted"
 
 	userFetchSuccess    = "User successfully retrieved"

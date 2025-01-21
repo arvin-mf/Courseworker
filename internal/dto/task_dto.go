@@ -13,6 +13,7 @@ type TaskResponse struct {
 	Description string    `json:"description"`
 	Image       string    `json:"image"`
 	Type        string    `json:"type"`
+	Highlight   bool      `json:"highlight"`
 	Deadline    time.Time `json:"deadline"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
@@ -22,8 +23,8 @@ func ToTaskResponse(t *sqlc.Task) *TaskResponse {
 	return &TaskResponse{
 		ID: t.ID, CourseID: t.CourseID, IsDone: t.IsDone,
 		Title: t.Title, Description: t.Description.String,
-		Image: t.Image.String, Type: t.Type, Deadline: t.Deadline.Time,
-		CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt,
+		Image: t.Image.String, Type: t.Type, Highlight: t.Highlight,
+		Deadline: t.Deadline.Time, CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt,
 	}
 }
 
@@ -33,8 +34,8 @@ func ToTaskResponses(tasks *[]sqlc.Task) []TaskResponse {
 		response := TaskResponse{
 			ID: t.ID, CourseID: t.CourseID, IsDone: t.IsDone,
 			Title: t.Title, Description: t.Description.String,
-			Image: t.Image.String, Type: t.Type, Deadline: t.Deadline.Time,
-			CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt,
+			Image: t.Image.String, Type: t.Type, Highlight: t.Highlight,
+			Deadline: t.Deadline.Time, CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt,
 		}
 		responses = append(responses, response)
 	}
