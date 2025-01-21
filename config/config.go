@@ -33,7 +33,7 @@ func SetupDB() (*sql.DB, error) {
 	return db, nil
 }
 
-func NewRedisClient() *redis.Client {
+func NewRedisClient() (*redis.Client, error) {
 	db, err := strconv.Atoi(os.Getenv("REDIS_DB"))
 	if err != nil {
 		panic("REDIS_DB must be a number")
@@ -47,8 +47,8 @@ func NewRedisClient() *redis.Client {
 
 	_, err = rdc.Ping(context.Background()).Result()
 	if err != nil {
-		log.Fatalf("Failed to connect to Redis: %v", err)
+		return nil, err
 	}
 
-	return rdc
+	return rdc, nil
 }

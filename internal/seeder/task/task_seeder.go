@@ -9,11 +9,13 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -21,13 +23,49 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	db, err := config.SetupDB()
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
+	dbChan := make(chan *sql.DB, 1)
+	rdcChan := make(chan *redis.Client, 1)
+	errChan := make(chan error, 2)
+	var wg sync.WaitGroup
+	wg.Add(2)
 
-	rdc := config.NewRedisClient()
+	go func() {
+		db, err := config.SetupDB()
+		if err != nil {
+			errChan <- fmt.Errorf("database intialization error: %w", err)
+			return
+		}
+		dbChan <- db
+	}()
+
+	go func() {
+		rdc, err := config.NewRedisClient()
+		if err != nil {
+			errChan <- fmt.Errorf("redis intialization error: %w", err)
+			return
+		}
+		rdcChan <- rdc
+	}()
+
+	wg.Wait()
+	close(dbChan)
+	close(rdcChan)
+	close(errChan)
+
+	var errs []error
+	for err := range errChan {
+		errs = append(errs, err)
+	}
+	if len(errs) > 0 {
+		for _, e := range errs {
+			log.Printf("Error: %v", e)
+		}
+		log.Fatal("Initialization failed")
+	}
+
+	db := <-dbChan
+	rdc := <-rdcChan
+	defer db.Close()
 	defer rdc.Close()
 
 	queries := sqlc.New(db)
