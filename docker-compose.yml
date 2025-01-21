@@ -1,5 +1,23 @@
 version: '3.8'
 services:
+  app:
+    image: courseworker-backend
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./.env:/app/.env
+    ports:
+      - "${APP_PORT}:${CONTAINER_APP_PORT}"
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      - MYSQL_HOST=${DB_HOST}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASS}
+      - MYSQL_DATABASE=${DB_NAME}
+      - REDIS_HOST=${REDIS_HOST}
   mysql:
     image: mysql:8.0
     container_name: mysql_container

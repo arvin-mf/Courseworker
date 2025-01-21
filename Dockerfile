@@ -1,4 +1,4 @@
-FROM golang:1.23.2-alpine as build
+FROM golang:1.23.2-alpine AS build
 
 WORKDIR /app
 
@@ -11,10 +11,10 @@ COPY . .
 
 RUN go build -o /main ./cmd
 
-FROM alpine:latest as run
+FROM alpine:latest AS run
 
 COPY --from=build /main /main
 
-WORKDIR /
+WORKDIR /app
 
 CMD ["/main"]
