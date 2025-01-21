@@ -1,0 +1,42 @@
+version: '3.8'
+services:
+  app:
+    image: courseworker-backend
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./.env:/app/.env
+    ports:
+      - "${APP_PORT}:${CONTAINER_APP_PORT}"
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      - MYSQL_HOST=${DB_HOST}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASS}
+      - MYSQL_DATABASE=${DB_NAME}
+      - REDIS_HOST=${REDIS_HOST}
+  mysql:
+    image: mysql:8.0
+    container_name: mysql_container
+    restart: always
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: ${MYSQL_ALLOW_EMPTY_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    ports:
+      - "${DB_PORT}:${CONTAINER_MYSQL_PORT}"
+    volumes:
+      - mysql_data:/var/lib/mysql
+  redis:
+    image: redis:7.0
+    container_name: redis_container
+    restart: always
+    ports:
+      - "${REDIS_PORT}:${CONTAINER_REDIS_PORT}"
+    volumes:
+      - redis_data:/data
+volumes:
+  mysql_data:
+  redis_data:
