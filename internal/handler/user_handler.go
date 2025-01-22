@@ -47,7 +47,7 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 }
 
 var googleOauthConfig = &oauth2.Config{
-	RedirectURL: "http://localhost:8000/auth/google/callback",
+	RedirectURL: os.Getenv("BASE_URL") + "/auth/google/callback",
 	Scopes: []string{
 		"https://www.googleapis.com/auth/userinfo.email",
 		"https://www.googleapis.com/auth/userinfo.profile",
@@ -64,7 +64,7 @@ func (*UserHandler) LoginWithGoogle(c *gin.Context) {
 
 	fmt.Println("url = " + authURL)
 
-	// temporary with string
+	// in string
 	c.String(http.StatusOK, authURL)
 }
 
@@ -119,7 +119,7 @@ func (h *UserHandler) GetGoogleDetails(c *gin.Context) {
 		response.HttpError(c, err)
 		return
 	}
-	response.Success(c, 200, userLoginSuccess, resp)
+	response.Success(c, http.StatusOK, userLoginSuccess, resp)
 }
 
 func (h *UserHandler) RegisterUser(c *gin.Context) {
