@@ -8,6 +8,7 @@ import (
 	_error "courseworker/pkg/error"
 	"courseworker/pkg/jwt"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strconv"
@@ -133,18 +134,20 @@ func (s *userService) SendConfirmationEmail(arg sqlc.CreateUserParams) (*dto.Reg
 	m.SetHeader("From", fmt.Sprintf("%s <%s>", fromName, fromEmail))
 	m.SetHeader("To", arg.Email)
 	m.SetHeader("Subject", "Email Confirmation")
-	m.SetBody("text/plain", fmt.Sprintf("Please confirm your email by clicking on the following link: %s", link))
+	m.SetBody("text/html", fmt.Sprintf("<p>Please confirm your email by clicking <a href='%s'>here</a>.</p>", link))
 
 	port, err := strconv.Atoi(smtpPort)
 	if err != nil {
-		return nil, _error.E(op, _error.Internal, _error.Title("Failes to send email"), err)
-	}
-
-	d := gomail.NewDialer(smtpHost, port, smtpUser, smtpPass)
-	err = d.DialAndSend(m)
-	if err != nil {
 		return nil, _error.E(op, _error.Internal, _error.Title("Failed to send email"), err)
 	}
+
+	go func() {
+		d := gomail.NewDialer(smtpHost, port, smtpUser, smtpPass)
+		err = d.DialAndSend(m)
+		if err != nil {
+			log.Printf("Failed to send email to %s: %v", arg.Email, err)
+		}
+	}()
 
 	return &dto.RegisterUserResp{
 		Email: arg.Email,
