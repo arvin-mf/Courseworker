@@ -79,17 +79,13 @@ type RegisterUserResp struct {
 }
 
 type RegistrationClaims struct {
-	Name     string `json:"name" binding:"required"`
-	Email    string `json:"email" binding:"required"`
-	HashedPw string `json:"hashed_pw" binding:"required"`
+	TempUserID string `json:"id" binding:"required"`
 	jwt.RegisteredClaims
 }
 
-func NewRegistrationClaims(name, email, pass string, exp time.Duration) RegistrationClaims {
+func NewRegistrationClaims(tempUserID string, exp time.Duration) RegistrationClaims {
 	return RegistrationClaims{
-		Name:     name,
-		Email:    email,
-		HashedPw: pass,
+		TempUserID: tempUserID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(exp)),
 		},

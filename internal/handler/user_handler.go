@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"courseworker/internal/db/sqlc"
 	"courseworker/internal/dto"
 	"courseworker/internal/service"
 	_error "courseworker/pkg/error"
@@ -16,7 +15,6 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
@@ -125,6 +123,7 @@ func (h *UserHandler) GetGoogleDetails(c *gin.Context) {
 }
 
 func (h *UserHandler) RegisterUser(c *gin.Context) {
+	const op _error.Op = "hand/RegisterUser"
 	var req dto.RegisterUserReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.HttpBindingError(c, err, req)
@@ -138,22 +137,18 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 	}
 	if isExist {
 		response.HttpError(c, _error.E(
-			_error.Op("hand/RegisterUser"),
-			_error.Forbidden,
+			op, _error.Forbidden,
 			_error.Title("Failed to register user"),
-			_error.Detail("email has been used"),
-			err,
+			"email has been used",
 		))
 		return
 	}
 
 	if req.Password != req.ConfirmPassword {
 		response.HttpError(c, _error.E(
-			_error.Op("hand/RegisterUser"),
-			_error.InvalidRequest,
+			op, _error.InvalidRequest,
 			_error.Title("Failed to register user"),
-			_error.Detail("password confirmation does not match"),
-			err,
+			"password confirmation does not match",
 		))
 		return
 	}
@@ -164,10 +159,10 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.serv.SendConfirmationEmail(sqlc.CreateUserParams{
+	resp, err := h.serv.SendConfirmationEmail(c, dto.CreateUserParams{
 		Name:     req.Name,
 		Email:    req.Email,
-		Password: hashed_pw,
+		HashedPw: hashed_pw,
 	})
 	if err != nil {
 		response.HttpError(c, err)
@@ -179,29 +174,20 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 
 func (h *UserHandler) CreateConfirmedUser(c *gin.Context) {
 	tokenTemp := c.Query("token")
-	claims := &dto.RegistrationClaims{}
-	token, err := jwt.ParseWithClaims(tokenTemp, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(os.Getenv("JWT_SECRET_KEY")), nil
-	})
 
-	if err != nil || !token.Valid {
-		response.HttpError(c, _error.E(
-			_error.Op("hand/CreateConfirmedUser"),
-			_error.InvalidRequest,
-			_error.Title("Failed to create user"),
-			_error.Detail("invalid token"),
-			err,
-		))
+	claims, err := h.serv.ValidateTokenAndClaims(c, tokenTemp)
+	if err != nil {
+		response.HttpError(c, err)
 		return
 	}
 
-	input := dto.CreateUserParams{
-		Name:     claims.Name,
-		Email:    claims.Email,
-		HashedPw: claims.HashedPw,
+	temp_user, err := h.serv.GetTempUser(c, claims.TempUserID)
+	if err != nil {
+		response.HttpError(c, err)
+		return
 	}
 
-	resp, err := h.serv.CreateUser(input)
+	resp, err := h.serv.CreateUser(*temp_user)
 	if err != nil {
 		response.HttpError(c, err)
 		return

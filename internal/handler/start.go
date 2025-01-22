@@ -38,7 +38,7 @@ func InitHandler(db *sql.DB, rd *redis.Client) (*UserHandler, *CourseHandler, *T
 	queries := sqlc.New(db)
 
 	userRepo := repository.NewUserRepository(queries)
-	userServ := service.NewUserService(userRepo)
+	userServ := service.NewUserService(userRepo, rd)
 	userHand := NewUserHandler(userServ)
 
 	courseRepo := repository.NewCourseRepository(queries)

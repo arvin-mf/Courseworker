@@ -26,19 +26,14 @@ func GenerateToken(payload sqlc.User) (string, error) {
 	return tokenJwt, nil
 }
 
-func GenerateConfirmationToken(payload sqlc.CreateUserParams) (string, error) {
+func GenerateConfirmationToken(tempUserID string) (string, error) {
 	expStr := os.Getenv("JWT_EXP")
 	var exp time.Duration
 	exp, err := time.ParseDuration(expStr)
 	if expStr == "" || err != nil {
 		exp = time.Hour * 3
 	}
-	tokenTemp := jwt.NewWithClaims(jwt.SigningMethodHS256, dto.NewRegistrationClaims(
-		payload.Name,
-		payload.Email,
-		payload.Password,
-		exp,
-	))
+	tokenTemp := jwt.NewWithClaims(jwt.SigningMethodHS256, dto.NewRegistrationClaims(tempUserID, exp))
 	token, err := tokenTemp.SignedString([]byte(os.Getenv("JWT_SECRET_KEY")))
 	if err != nil {
 		return "", err

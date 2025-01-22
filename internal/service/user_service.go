@@ -6,15 +6,19 @@ import (
 	"courseworker/internal/repository"
 	"courseworker/pkg/bcrypt"
 	_error "courseworker/pkg/error"
-	"courseworker/pkg/jwt"
+	_jwt "courseworker/pkg/jwt"
 	"fmt"
 	"log"
 	"net"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"gopkg.in/gomail.v2"
 )
 
@@ -25,16 +29,22 @@ type UserService interface {
 	GenerateToken(email string) (*dto.TokenResp, error)
 	CreateUser(arg dto.CreateUserParams) (*dto.ResponseID, error)
 	HashPassword(pw string) (string, error)
-	SendConfirmationEmail(arg sqlc.CreateUserParams) (*dto.RegisterUserResp, error)
+	SendConfirmationEmail(c *gin.Context, arg dto.CreateUserParams) (*dto.RegisterUserResp, error)
+	ValidateTokenAndClaims(c *gin.Context, reqToken string) (*dto.RegistrationClaims, error)
+	GetTempUser(c *gin.Context, tempUserID string) (*dto.CreateUserParams, error)
 	LoginUser(arg dto.LoginUserReq) (*dto.TokenResp, error)
 }
 
 type userService struct {
 	repo repository.UserRepository
+	rd   *redis.Client
 }
 
-func NewUserService(r repository.UserRepository) UserService {
-	return &userService{r}
+func NewUserService(r repository.UserRepository, rdc *redis.Client) UserService {
+	return &userService{
+		repo: r,
+		rd:   rdc,
+	}
 }
 
 func (s *userService) GetUsers() ([]dto.UserResponse, error) {
@@ -59,7 +69,7 @@ func (s *userService) EmailExists(email string) (bool, error) {
 	const op _error.Op = "serv/EmailExists"
 	count, err := s.repo.EmailExists(email)
 	if err != nil {
-		return false, _error.E(op, _error.Title("Failed to check email existance"))
+		return true, _error.E(op, _error.Title("Failed to check email existence"))
 	}
 	if count < 1 {
 		return false, nil
@@ -74,7 +84,7 @@ func (s *userService) GenerateToken(email string) (*dto.TokenResp, error) {
 		return nil, _error.E(op, _error.Title("Failed to get user"), err)
 	}
 
-	token, err := jwt.GenerateToken(*user)
+	token, err := _jwt.GenerateToken(*user)
 	if err != nil {
 		return nil, _error.E(op, _error.Internal, _error.Title("Failed to generate token"), err)
 	}
@@ -108,7 +118,7 @@ func (s *userService) HashPassword(pw string) (string, error) {
 	return hashedPassword, err
 }
 
-func (s *userService) SendConfirmationEmail(arg sqlc.CreateUserParams) (*dto.RegisterUserResp, error) {
+func (s *userService) SendConfirmationEmail(c *gin.Context, arg dto.CreateUserParams) (*dto.RegisterUserResp, error) {
 	const op _error.Op = "serv/SendConfirmationEmail"
 	domain := strings.Split(arg.Email, "@")[1]
 	mxRecords, err := net.LookupMX(domain)
@@ -116,7 +126,20 @@ func (s *userService) SendConfirmationEmail(arg sqlc.CreateUserParams) (*dto.Reg
 		return nil, _error.E(op, _error.Forbidden, _error.Title("Failed to send email"), err)
 	}
 
-	token, err := jwt.GenerateConfirmationToken(arg)
+	tempUserID := uuid.New().String()
+	key := "temp-user:" + tempUserID
+	if err := s.rd.HSet(c, key, map[string]interface{}{
+		"name":      arg.Name,
+		"email":     arg.Email,
+		"hashed_pw": arg.HashedPw,
+	}).Err(); err != nil {
+		return nil, _error.E(op, _error.Cache, _error.Title("Failed to store data"), err)
+	}
+	if err := s.rd.Expire(c, key, 15*time.Minute).Err(); err != nil {
+		log.Printf("Failed to set Redis expiration for key: %s", key)
+	}
+
+	token, err := _jwt.GenerateConfirmationToken(tempUserID)
 	if err != nil {
 		return nil, _error.E(op, _error.Internal, _error.Title("Failed to send email"), err)
 	}
@@ -154,6 +177,33 @@ func (s *userService) SendConfirmationEmail(arg sqlc.CreateUserParams) (*dto.Reg
 	}, nil
 }
 
+func (s *userService) ValidateTokenAndClaims(c *gin.Context, reqToken string) (*dto.RegistrationClaims, error) {
+	const op _error.Op = "serv/ValidateTokenAndClaims"
+	claims := &dto.RegistrationClaims{}
+	token, err := jwt.ParseWithClaims(reqToken, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("JWT_SECRET_KEY")), nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, _error.E(op, _error.InvalidRequest, _error.Title("Invalid token"), err)
+	}
+	return claims, nil
+}
+
+func (s *userService) GetTempUser(c *gin.Context, tempUserID string) (*dto.CreateUserParams, error) {
+	const op _error.Op = "serv/GetTempUser"
+	key := "temp-user:" + tempUserID
+	result, err := s.rd.HGetAll(c, key).Result()
+	if err != nil {
+		return nil, _error.E(op, _error.Cache, _error.Title("Failed to get temp user"), err)
+	}
+	return &dto.CreateUserParams{
+		Name:     result["name"],
+		Email:    result["email"],
+		HashedPw: result["hashed_pw"],
+	}, nil
+}
+
 func (s *userService) LoginUser(arg dto.LoginUserReq) (*dto.TokenResp, error) {
 	const op _error.Op = "serv/GetUserByEmail"
 	user, err := s.repo.GetUserByEmail(arg.Email)
@@ -165,7 +215,7 @@ func (s *userService) LoginUser(arg dto.LoginUserReq) (*dto.TokenResp, error) {
 		return nil, _error.E(op, _error.Validation, _error.Title("Failed to validate password"), err)
 	}
 
-	token, err := jwt.GenerateToken(*user)
+	token, err := _jwt.GenerateToken(*user)
 	if err != nil {
 		return nil, _error.E(op, _error.Internal, _error.Title("Failed to generate token"), err)
 	}
