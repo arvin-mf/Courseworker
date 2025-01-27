@@ -42,7 +42,7 @@ func ToTaskResponses(tasks *[]sqlc.Task) []TaskResponse {
 	return responses
 }
 
-type TaskCreateReq struct {
+type TaskCreateUpdateReq struct {
 	Title       string `json:"title"`
 	Type        string `json:"type"`
 	Description string `json:"description"`

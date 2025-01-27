@@ -17,6 +17,7 @@ type TaskRepository interface {
 	CreateTask(param sqlc.CreateTaskParams) (sql.Result, error)
 	DeleteTask(taskID string) (sql.Result, error)
 	UpdateTaskHighlight(param sqlc.SwitchTaskHighlightParams) (sql.Result, error)
+	UpdateTask(param sqlc.UpdateTaskParams) (sql.Result, error)
 }
 
 type taskRepository struct {
@@ -119,6 +120,15 @@ func (r *taskRepository) UpdateTaskHighlight(param sqlc.SwitchTaskHighlightParam
 			_error.Title("Failed to switch highlight"),
 			"There is no row affected by the query",
 		)
+	}
+	return result, nil
+}
+
+func (r *taskRepository) UpdateTask(param sqlc.UpdateTaskParams) (sql.Result, error) {
+	const op _error.Op = "repo/UpdateTask"
+	result, err := r.db.UpdateTask(context.Background(), param)
+	if err != nil {
+		return nil, _error.E(op, _error.Database, err)
 	}
 	return result, nil
 }

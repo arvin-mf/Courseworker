@@ -19,9 +19,10 @@ type TaskService interface {
 	GetAllTasksOfUser(authUserID string) ([]dto.TaskResponse, error)
 	GetTasksByCourseID(c *gin.Context, authUserID string, courseID int64) ([]dto.TaskResponse, error)
 	GetTaskByID(c *gin.Context, authUserID, taskID string, courseID int64) (*dto.TaskResponse, error)
-	CreateTask(c *gin.Context, authUserID string, courseID int64, req dto.TaskCreateReq) (*dto.ResponseID, error)
+	CreateTask(c *gin.Context, authUserID string, courseID int64, req dto.TaskCreateUpdateReq) (*dto.ResponseID, error)
 	DeleteTask(c *gin.Context, authUserID, taskID string, courseID int64) error
 	SwitchTaskHighlight(c *gin.Context, authUserID, taskID string, courseID int64) (*dto.ResponseID, error)
+	UpdateTask(c *gin.Context, authUserID, taskID string, courseID int64, req dto.TaskCreateUpdateReq) (*dto.ResponseID, error)
 }
 
 type taskService struct {
@@ -104,7 +105,7 @@ func (s *taskService) ValidateOwnershipTask(c *gin.Context, authUserID, taskID s
 	return nil
 }
 
-func (s *taskService) CreateTask(c *gin.Context, authUserID string, courseID int64, req dto.TaskCreateReq) (*dto.ResponseID, error) {
+func (s *taskService) CreateTask(c *gin.Context, authUserID string, courseID int64, req dto.TaskCreateUpdateReq) (*dto.ResponseID, error) {
 	const op _error.Op = "serv/CreateTask"
 
 	if err := s.cs.ValidateOwnershipCourse(c, authUserID, courseID); err != nil {
@@ -172,6 +173,31 @@ func (s *taskService) SwitchTaskHighlight(c *gin.Context, authUserID, taskID str
 		ID:        taskID,
 	}
 	_, err = s.repo.UpdateTaskHighlight(param)
+	if err != nil {
+		return nil, _error.E(op, _error.Title("Failed to update task"), err)
+	}
+	return &dto.ResponseID{ID: param.ID}, nil
+}
+
+func (s *taskService) UpdateTask(c *gin.Context, authUserID, taskID string, courseID int64, req dto.TaskCreateUpdateReq) (*dto.ResponseID, error) {
+	const op _error.Op = "serv/UpdateTask"
+
+	if err := s.ValidateOwnershipTask(c, authUserID, taskID, courseID); err != nil {
+		return nil, _error.E(op, _error.Forbidden, _error.Title("Forbidden action"), err)
+	}
+
+	deadline, err := time.Parse("2006-01-02 15:04", req.Deadline)
+	if err != nil {
+		return nil, _error.E(op, _error.Title("Failed to create task"), err)
+	}
+	param := sqlc.UpdateTaskParams{
+		Title:       req.Title,
+		Type:        req.Type,
+		Description: sql.NullString{String: req.Description, Valid: true},
+		Deadline:    sql.NullTime{Time: deadline, Valid: true},
+		ID:          taskID,
+	}
+	_, err = s.repo.UpdateTask(param)
 	if err != nil {
 		return nil, _error.E(op, _error.Title("Failed to update task"), err)
 	}

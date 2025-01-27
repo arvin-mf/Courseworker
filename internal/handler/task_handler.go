@@ -87,7 +87,7 @@ func (h *TaskHandler) CreateTask(c *gin.Context) {
 		return
 	}
 
-	var req dto.TaskCreateReq
+	var req dto.TaskCreateUpdateReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.HttpBindingError(c, err, req)
 	}
@@ -136,6 +136,34 @@ func (h *TaskHandler) SwitchTaskHighlight(c *gin.Context) {
 	}
 
 	resp, err := h.serv.SwitchTaskHighlight(c, claims.ID, taskID, int64(courseID))
+	if err != nil {
+		response.HttpError(c, err)
+		return
+	}
+	response.Success(c, http.StatusOK, taskUpdateSuccess, resp)
+}
+
+func (h *TaskHandler) UpdateTask(c *gin.Context) {
+	auth, _ := c.Get("user")
+	claims := auth.(*dto.UserClaims)
+
+	taskID := c.Param("taskId")
+	courseID, err := strconv.Atoi(c.Param("courseId"))
+	if err != nil {
+		response.HttpError(c, _error.E(
+			_error.Op("hand/UpdateTask"), _error.InvalidRequest,
+			_error.Title("Failed to update tasks"), "courseId must be a number",
+		))
+		return
+	}
+
+	var req dto.TaskCreateUpdateReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.HttpBindingError(c, err, req)
+		return
+	}
+
+	resp, err := h.serv.UpdateTask(c, claims.ID, taskID, int64(courseID), req)
 	if err != nil {
 		response.HttpError(c, err)
 		return
